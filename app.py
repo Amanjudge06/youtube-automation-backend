@@ -1341,12 +1341,13 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
 
 # Serve static files (React build)
 # Mount the static directory for JS/CSS
+# IMPORTANT: Mount /static BEFORE the catch-all route
 app.mount("/static", StaticFiles(directory="frontend/build/static"), name="static")
 
 # Serve manifest.json and other root files if they exist
 @app.get("/manifest.json")
 async def manifest():
-    return FileResponse("frontend/build/asset-manifest.json") # React often names it asset-manifest.json or manifest.json
+    return FileResponse("frontend/build/asset-manifest.json")
 
 @app.get("/favicon.ico")
 async def favicon():
@@ -1358,6 +1359,10 @@ async def catch_all(full_path: str):
     """Serve the React frontend for any unknown route (SPA routing)"""
     # If the path starts with /api, return 404 because it's a missing API endpoint
     if full_path.startswith("api/"):
+        return Response(status_code=404)
+    
+    # Explicitly ignore /static requests here just in case mount didn't catch it (though it should)
+    if full_path.startswith("static/"):
         return Response(status_code=404)
         
     # Otherwise serve index.html
