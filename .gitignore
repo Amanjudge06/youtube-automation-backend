@@ -41,3 +41,14 @@ Thumbs.db
 # API keys (never commit these!)
 config_local.py
 secrets.py
+youtube_credentials.json
+youtube_token.pickle
+*.pickle
+
+# User Data
+user_data/
+my_channel_info.json
+
+# Frontend
+frontend/node_modules/
+frontend/build/
