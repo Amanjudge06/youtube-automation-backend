@@ -369,10 +369,11 @@ def _get_optimal_script_length(performance_analysis: Dict) -> str:
         return "30-45 seconds (shorts format)"
 
 # API Routes
-@app.get("/")
-async def root():
-    """Serve the React frontend"""
-    return FileResponse("frontend/build/index.html")
+# Root route is now handled by the catch-all, but we keep this for clarity if needed
+# @app.get("/")
+# async def root():
+#     """Serve the React frontend"""
+#     return FileResponse("frontend/build/index.html")
 
 @app.get("/optimization/my-channel")
 async def get_my_channel():
@@ -1339,7 +1340,28 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         return None
 
 # Serve static files (React build)
+# Mount the static directory for JS/CSS
 app.mount("/static", StaticFiles(directory="frontend/build/static"), name="static")
+
+# Serve manifest.json and other root files if they exist
+@app.get("/manifest.json")
+async def manifest():
+    return FileResponse("frontend/build/asset-manifest.json") # React often names it asset-manifest.json or manifest.json
+
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("frontend/build/favicon.ico") if Path("frontend/build/favicon.ico").exists() else Response(status_code=404)
+
+# Catch-all route for React Router (must be last)
+@app.get("/{full_path:path}")
+async def catch_all(full_path: str):
+    """Serve the React frontend for any unknown route (SPA routing)"""
+    # If the path starts with /api, return 404 because it's a missing API endpoint
+    if full_path.startswith("api/"):
+        return Response(status_code=404)
+        
+    # Otherwise serve index.html
+    return FileResponse("frontend/build/index.html")
 
 if __name__ == "__main__":
     import uvicorn
