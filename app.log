@@ -1,0 +1,126 @@
+2026-01-03 12:32:12,927 - utils.helpers - INFO - Logging configured successfully
+2026-01-03 12:32:13,112 - utils.helpers - INFO - Logging configured successfully
+2026-01-03 12:32:13,153 - services.supabase_service - INFO - ✅ Supabase client initialized successfully
+2026-01-03 12:32:13,198 - __main__ - INFO - Starting Snip-Z Web Server...
+2026-01-03 12:32:13,198 - __main__ - INFO - Access the web interface at: http://localhost:8000
+INFO:     Will watch for changes in these directories: ['/Users/aman/Documents/YouTube Automation']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [76496] using StatReload
+2026-01-03 12:32:13,654 - utils.helpers - INFO - Logging configured successfully
+2026-01-03 12:32:13,795 - utils.helpers - INFO - Logging configured successfully
+2026-01-03 12:32:13,826 - services.supabase_service - INFO - ✅ Supabase client initialized successfully
+2026-01-03 12:32:13,872 - utils.helpers - INFO - Logging configured successfully
+INFO:     Started server process [76501]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:52315 - "POST /api/automation/trigger HTTP/1.1" 200 OK
+2026-01-03 12:32:22,172 - utils.helpers - INFO - Logging configured successfully
+2026-01-03 12:32:22,174 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-01-03 12:32:22,177 - services.youtube_upload_service - INFO - ✅ YouTube API authenticated successfully
+2026-01-03 12:32:22,820 - services.youtube_upload_service - INFO - ✅ Channel info stored: TRENDING TODAY 👀 (UCWKKWQV4UKlMhwtaiMoJtVA)
+2026-01-03 12:32:22,820 - services.youtube_analytics_service - INFO - YouTube Analytics API client initialized with authenticated service
+2026-01-03 12:32:22,820 - services.content_optimization_service - INFO - Creating new optimization profile
+2026-01-03 12:32:22,820 - services.content_optimization_service - INFO - Generated optimized script configuration
+2026-01-03 12:32:22,820 - services.script_generator - INFO - Script generator initialized with optimization profile:
+2026-01-03 12:32:22,820 - services.script_generator - INFO -   Hook style: question_based
+2026-01-03 12:32:22,820 - services.script_generator - INFO -   Tone: energetic and engaging
+2026-01-03 12:32:22,820 - services.script_generator - INFO -   Controversy level: 0.3
+2026-01-03 12:32:22,820 - services.script_generator - INFO -   Temperature: 0.78
+2026-01-03 12:32:22,954 - services.simple_video_service - INFO - 🚀 Hardware acceleration enabled: h264_videotoolbox
+2026-01-03 12:32:22,954 - services.trends_service - INFO - Fetching basic trending topics for region: US
+2026-01-03 12:32:23,261 - services.trends_service - INFO - Realtime Topic 1: tommy lee jones daughter (Volume: 200000)
+2026-01-03 12:32:23,262 - services.trends_service - INFO - Realtime Topic 2: navy vs cincinnati (Volume: 100000)
+2026-01-03 12:32:23,262 - services.trends_service - INFO - Realtime Topic 3: mexico earthquake today (Volume: 50000)
+2026-01-03 12:32:23,262 - services.trends_service - INFO - Realtime Topic 4: spurs vs pacers (Volume: 20000)
+2026-01-03 12:32:23,262 - services.trends_service - INFO - Realtime Topic 5: hawks vs knicks (Volume: 20000)
+2026-01-03 12:32:23,262 - services.trends_service - INFO - Realtime Topic 6: nuggets vs cavaliers (Volume: 20000)
+2026-01-03 12:32:23,262 - services.trends_service - INFO - Realtime Topic 7: arizona vs smu (Volume: 50000)
+2026-01-03 12:32:23,262 - services.trends_service - INFO - Realtime Topic 8: celina powell (Volume: 20000)
+2026-01-03 12:32:23,262 - services.trends_service - INFO - Realtime Topic 9: usc vs michigan (Volume: 20000)
+2026-01-03 12:32:23,262 - services.trends_service - INFO - Realtime Topic 10: rice football (Volume: 50000)
+2026-01-03 12:32:23,263 - app - INFO - Selected trending topic: tommy lee jones daughter
+2026-01-03 12:32:23,263 - services.research_service - INFO - Researching trending topic: tommy lee jones daughter
+2026-01-03 12:32:28,639 - services.research_service - INFO - ✅ Research completed for 'tommy lee jones daughter'
+2026-01-03 12:32:28,639 - services.research_service - INFO -    📄 Summary length: 2213
+2026-01-03 12:32:28,639 - services.research_service - INFO -    🔍 Key points found: 4
+2026-01-03 12:32:28,640 - services.research_service - INFO -    📰 Sources mentioned: 3
+2026-01-03 12:32:28,641 - services.script_generator - INFO - Generating script for topic: tommy lee jones daughter (Category: default)
+2026-01-03 12:32:28,641 - services.script_generator - INFO -    Using Perplexity research data for enhanced script generation
+2026-01-03 12:32:39,896 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-03 12:32:39,901 - services.script_generator - WARNING - Initial JSON parse failed: Expecting ',' delimiter: line 10 column 132 (char 1712)
+2026-01-03 12:32:39,901 - services.script_generator - WARNING - Error context: ..., "visual_description": "multiple news headlines"}...
+2026-01-03 12:32:39,902 - services.script_generator - ERROR - Could not fix JSON: Invalid control character at: line 2 column 83 (char 84)
+2026-01-03 12:32:39,902 - services.script_generator - ERROR - Final JSON attempt (first 500 chars): {
+    "title": "TOMMY LEE JONES' DAUGHTER: The TRAGIC NEWS That SHOCKED Everyone!\",
+    \"hook\": \"This was hidden until now…\",
+    \"script\": \"Victoria Jones, the 34-year-old daughter of TOMMY LEE JONES, was found DEAD in a San Francisco hotel. I KNOW—this is INSANE, right? But WAIT—what happened on New Year's Day to cause such a tragedy? It sent shockwaves through the media. Everyone's talking about it, but HERE'S the kicker: the cause of death? STILL UNKNOWN. Can you believe that? And th
+2026-01-03 12:32:39,902 - services.script_generator - INFO - Attempting pattern-based extraction as last resort
+2026-01-03 12:32:39,902 - services.script_generator - INFO - Successfully extracted data using pattern matching
+2026-01-03 12:32:39,902 - services.script_generator - INFO - Successfully generated script with 1 scenes
+2026-01-03 12:32:39,903 - services.voiceover_service - INFO - Enhanced script with v3 Alpha natural speech patterns
+2026-01-03 12:32:39,903 - services.voiceover_service - INFO - Generating voiceover (853 characters)
+2026-01-03 12:32:42,662 - services.voiceover_service - INFO - Voiceover saved to: /Users/aman/Documents/YouTube Automation/temp/tommy_lee_jones_daughter_20260103_123239.mp3
+2026-01-03 12:32:42,687 - services.voiceover_service - INFO - Generating subtitles for: /Users/aman/Documents/YouTube Automation/temp/tommy_lee_jones_daughter_20260103_123239.mp3
+2026-01-03 12:32:48,319 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/audio/transcriptions "HTTP/1.1 200 OK"
+2026-01-03 12:32:48,321 - services.voiceover_service - INFO - ✅ Subtitles generated: /Users/aman/Documents/YouTube Automation/temp/tommy_lee_jones_daughter_20260103_123239.srt
+2026-01-03 12:32:48,321 - services.image_service - INFO - Fetching images for topic: tommy lee jones daughter
+2026-01-03 12:32:48,321 - services.image_service - INFO - 🔍 Generating queries strictly for topic: tommy lee jones daughter
+2026-01-03 12:32:48,321 - services.image_service - INFO - Generated 11 unique search queries based strictly on topic
+2026-01-03 12:32:48,321 - services.image_service - INFO - 🎨 Fetching unique images for 11 different scenes
+2026-01-03 12:32:48,321 - services.image_service - INFO - Searching images for: tommy lee jones daughter high quality photo
+2026-01-03 12:32:48,472 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:48,473 - services.image_service - INFO -   Scene 1: 'tommy lee jones daughter high quality photo...' → 2 images
+2026-01-03 12:32:48,473 - services.image_service - INFO - Searching images for: tommy lee jones daughter news image
+2026-01-03 12:32:48,636 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:48,636 - services.image_service - INFO -   Scene 2: 'tommy lee jones daughter news image...' → 2 images
+2026-01-03 12:32:48,636 - services.image_service - INFO - Searching images for: [1][2][3][4][5][6][7] ### Key Details of the
+2026-01-03 12:32:52,903 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:52,904 - services.image_service - INFO -   Scene 3: '[1][2][3][4][5][6][7] ### Key Details of the...' → 2 images
+2026-01-03 12:32:52,904 - services.image_service - INFO - Searching images for: [2][3][4][5][6][7] Investigation Status: No foul play
+2026-01-03 12:32:54,848 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:54,850 - services.image_service - INFO -   Scene 4: '[2][3][4][5][6][7] Investigation Status: No foul p...' → 2 images
+2026-01-03 12:32:54,851 - services.image_service - INFO - Searching images for: [2][3][4][6] Emotional Impact: Tributes from Hollywood
+2026-01-03 12:32:57,744 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:57,744 - services.image_service - INFO -   Scene 5: '[2][3][4][6] Emotional Impact: Tributes from Holly...' → 2 images
+2026-01-03 12:32:57,744 - services.image_service - INFO - Searching images for: tommy lee jones daughter dramatic photo
+2026-01-03 12:32:57,905 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:57,906 - services.image_service - INFO -   Scene 6: 'tommy lee jones daughter dramatic photo...' → 2 images
+2026-01-03 12:32:57,906 - services.image_service - INFO - Searching images for: tommy lee jones daughter close-up shot
+2026-01-03 12:32:58,051 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:58,051 - services.image_service - INFO -   Scene 7: 'tommy lee jones daughter close-up shot...' → 2 images
+2026-01-03 12:32:58,052 - services.image_service - INFO - Searching images for: tommy lee jones daughter wide angle view
+2026-01-03 12:32:58,245 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:58,245 - services.image_service - INFO -   Scene 8: 'tommy lee jones daughter wide angle view...' → 2 images
+2026-01-03 12:32:58,245 - services.image_service - INFO - Searching images for: tommy lee jones daughter action moment
+2026-01-03 12:32:58,398 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:58,399 - services.image_service - INFO -   Scene 9: 'tommy lee jones daughter action moment...' → 2 images
+2026-01-03 12:32:58,399 - services.image_service - INFO - Searching images for: tommy lee jones daughter event photo
+2026-01-03 12:32:58,599 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:58,600 - services.image_service - INFO -   Scene 10: 'tommy lee jones daughter event photo...' → 2 images
+2026-01-03 12:32:58,600 - services.image_service - INFO - Searching images for: tommy lee jones daughter press conference
+2026-01-03 12:32:58,788 - services.image_service - INFO - Found 2 images
+2026-01-03 12:32:58,788 - services.image_service - INFO -   Scene 11: 'tommy lee jones daughter press conference...' → 2 images
+2026-01-03 12:32:58,788 - services.image_service - INFO - ✅ Collected 22 images from 11 unique searches
+2026-01-03 12:32:58,789 - services.image_service - INFO - ⚡ Downloading 20 images in parallel (max 5 workers)...
+2026-01-03 12:33:03,450 - services.image_service - INFO - ✅ Downloaded 15/20 images successfully
+2026-01-03 12:33:03,450 - app - INFO - Image service returned 14 paths
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 1 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_1_1767403979.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 2 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_3_1767403979.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 3 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_4_1767403979.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 4 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_0_1767403979.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 5 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_6_1767403979.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 6 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_10_1767403979.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 7 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_14_1767403980.webp
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 8 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_12_1767403980.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 9 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_13_1767403980.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 10 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_11_1767403980.webp
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 11 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_16_1767403980.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 12 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_18_1767403980.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 13 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_19_1767403980.jpg
+2026-01-03 12:33:03,450 - app - INFO -   ✅ Image 14 exists: /Users/aman/Documents/YouTube Automation/temp/images/img_17_1767403981.jpg
+2026-01-03 12:33:03,450 - app - INFO - Using 14 existing images for video creation
+2026-01-03 12:33:03,643 - services.simple_video_service - INFO - Creating video with 14 valid images using single filtergraph
+2026-01-03 12:33:03,643 - services.simple_video_service - INFO - Duration per image: 3.90s (optimized for retention)
+2026-01-03 12:33:03,643 - services.simple_video_service - INFO - Total images used: 14
+2026-01-03 12:33:03,643 - services.simple_video_service - INFO - Creating video with single-pass filtergraph...
+2026-01-03 12:33:03,643 - services.simple_video_service - INFO - Processing 14 images with alternating motion effects

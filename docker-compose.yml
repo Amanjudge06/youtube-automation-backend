@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: snip-z-automation
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/app/output
+      - ./temp:/app/temp
+      - ./logs:/app/logs
+      - ./user_data:/app/user_data
+      - ./youtube_credentials.json:/app/youtube_credentials.json
+      - ./my_channel_info.json:/app/my_channel_info.json
+    env_file:
+      - .env
+    restart: unless-stopped

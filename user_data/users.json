@@ -1,0 +1,14 @@
+{
+  "demo_user": {
+    "user_id": "demo_user",
+    "email": null,
+    "created_at": "2025-12-30 23:22:19.857103",
+    "youtube_channels": [],
+    "active_channel": null,
+    "settings": {
+      "voice_id": "default",
+      "language": "en",
+      "video_privacy": "public"
+    }
+  }
+}
