@@ -37,15 +37,40 @@ class YouTubeUploadService:
         self.scopes = ['https://www.googleapis.com/auth/youtube.upload', 
                       'https://www.googleapis.com/auth/youtube.readonly']
     
+    def _get_client_config(self):
+        """Get client configuration from file or environment variables"""
+        # Try loading from file first
+        if self.credentials_file.exists():
+            try:
+                with open(self.credentials_file, 'r') as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load credentials file: {e}")
+        
+        # Fallback to environment variables
+        if config.YOUTUBE_CLIENT_ID and config.YOUTUBE_CLIENT_SECRET:
+            logger.info("Using YouTube credentials from environment variables")
+            return {
+                "web": {
+                    "client_id": config.YOUTUBE_CLIENT_ID,
+                    "client_secret": config.YOUTUBE_CLIENT_SECRET,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "redirect_uris": [config.YOUTUBE_REDIRECT_URI]
+                }
+            }
+            
+        raise Exception("YouTube credentials not found. Please ensure youtube_credentials.json exists or YOUTUBE_CLIENT_ID/SECRET env vars are set.")
+
     def get_auth_url(self):
         """Generate YouTube OAuth URL for new channel authentication"""
         try:
-            if not self.credentials_file.exists():
-                raise Exception("YouTube credentials file not found. Please ensure youtube_credentials.json exists.")
+            client_config = self._get_client_config()
             
             # Create OAuth flow
-            flow = InstalledAppFlow.from_client_secrets_file(
-                str(self.credentials_file), 
+            flow = InstalledAppFlow.from_client_config(
+                client_config, 
                 scopes=self.scopes
             )
             
@@ -67,13 +92,12 @@ class YouTubeUploadService:
     def get_auth_url_for_user(self, user_id: str):
         """Generate YouTube OAuth URL for a specific user"""
         try:
-            if not self.credentials_file.exists():
-                raise Exception("YouTube credentials file not found. Please ensure youtube_credentials.json exists.")
+            client_config = self._get_client_config()
             
             # For SaaS, we need to use the web flow, not installed app flow
-            import json
-            with open(self.credentials_file, 'r') as f:
-                client_config = json.load(f)
+            # Extract client ID from config (could be 'web' or 'installed')
+            app_type = list(client_config.keys())[0]
+            client_id = client_config[app_type]['client_id']
             
             # Build OAuth URL manually for web application flow
             from urllib.parse import urlencode
@@ -81,7 +105,7 @@ class YouTubeUploadService:
             
             base_url = "https://accounts.google.com/o/oauth2/auth"
             params = {
-                'client_id': config.YOUTUBE_CLIENT_ID,
+                'client_id': client_id,
                 'redirect_uri': config.YOUTUBE_REDIRECT_URI,
                 'scope': ' '.join(self.scopes),
                 'response_type': 'code',
@@ -175,8 +199,9 @@ class YouTubeUploadService:
         try:
             if not hasattr(self, 'temp_flow'):
                 # Recreate flow if needed
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    str(self.credentials_file), 
+                client_config = self._get_client_config()
+                flow = InstalledAppFlow.from_client_config(
+                    client_config, 
                     scopes=self.scopes
                 )
             else:
