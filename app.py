@@ -875,6 +875,45 @@ async def get_status():
     """Get current automation status"""
     return automation_status
 
+@app.get("/api/diagnostics")
+async def get_diagnostics():
+    """Check system health and configuration"""
+    import shutil
+    import subprocess
+    
+    checks = {
+        "api_keys": {
+            "OPENAI_API_KEY": bool(config.OPENAI_API_KEY),
+            "SERP_API_KEY": bool(config.SERP_API_KEY),
+            "ELEVENLABS_API_KEY": bool(config.ELEVENLABS_API_KEY),
+            "PEXELS_API_KEY": bool(config.PEXELS_API_KEY),
+            "YOUTUBE_CLIENT_ID": bool(config.YOUTUBE_CLIENT_ID),
+            "YOUTUBE_CLIENT_SECRET": bool(config.YOUTUBE_CLIENT_SECRET),
+            "SUPABASE_URL": bool(config.SUPABASE_URL),
+        },
+        "system": {
+            "ffmpeg": bool(shutil.which("ffmpeg")),
+            "ffprobe": bool(shutil.which("ffprobe")),
+            "file_command": bool(shutil.which("file")),
+            "python_version": sys.version,
+        },
+        "directories": {
+            "output": Path(config.OUTPUT_DIR).exists(),
+            "temp": Path(config.TEMP_DIR).exists(),
+            "logs": Path(config.LOGS_DIR).exists(),
+        }
+    }
+    
+    # Check internet access
+    try:
+        import requests
+        requests.get("https://www.google.com", timeout=5)
+        checks["system"]["internet_access"] = True
+    except:
+        checks["system"]["internet_access"] = False
+        
+    return checks
+
 @app.post("/api/optimization/analyze")
 async def analyze_and_optimize(background_tasks: BackgroundTasks, channel_id: str = None):
     """Analyze channel performance and optimize content generation"""
