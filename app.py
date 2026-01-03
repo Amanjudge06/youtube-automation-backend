@@ -3,7 +3,7 @@ YouTube Shorts Automation - Web Application
 FastAPI backend for the automation system
 """
 
-from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File
+from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
@@ -1341,8 +1341,12 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
 
 # Serve static files (React build)
 # Mount the static directory for JS/CSS
-# IMPORTANT: Mount /static BEFORE the catch-all route
-app.mount("/static", StaticFiles(directory="frontend/build/static"), name="static")
+static_dir = Path("frontend/build/static")
+if static_dir.exists():
+    logger.info(f"Mounting static directory: {static_dir.absolute()}")
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+else:
+    logger.warning(f"Static directory not found at {static_dir.absolute()}")
 
 # Serve manifest.json and other root files if they exist
 @app.get("/manifest.json")
