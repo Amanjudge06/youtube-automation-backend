@@ -1220,12 +1220,15 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         # Get trending topics
         trending_topics = trends_service.get_trending_topics()
         if not trending_topics:
-            logger.error("No trending topics found")
+            msg = "No trending topics found. Check SERP_API_KEY or region settings."
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
             return None
             
         selected_topic = trending_topics[0]
         topic = selected_topic['query']
         logger.info(f"Selected trending topic: {topic}")
+        automation_status["logs"].append(f"✅ Selected topic: {topic}")
         
         automation_status["current_step"] = "Researching topic..."
         automation_status["progress"] = 30
@@ -1233,7 +1236,9 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         # Research the topic
         research_data = research_service.research_trending_topic(topic)
         if not research_data:
-            logger.error(f"Failed to research topic: {topic}")
+            msg = f"Failed to research topic: {topic}. Check PERPLEXITY_API_KEY."
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
             return None
             
         automation_status["current_step"] = "Generating script..."
@@ -1242,7 +1247,9 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         # Generate script
         script_data = script_generator.generate_script(selected_topic, research_data)
         if not script_data:
-            logger.error("Failed to generate script")
+            msg = "Failed to generate script. Check OPENAI_API_KEY."
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
             return None
             
         automation_status["current_step"] = "Creating voiceover..."
@@ -1258,7 +1265,9 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         )
         
         if not success or not audio_path.exists():
-            logger.error("Failed to generate voiceover")
+            msg = "Failed to generate voiceover. Check ELEVENLABS_API_KEY."
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
             return None
             
         # Generate Subtitles
@@ -1272,7 +1281,9 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         scenes = script_data.get('scenes', [])
         image_paths = image_service.fetch_images_for_scenes(topic, script_data, research_data)
         if not image_paths:
-            logger.error("Failed to collect images")
+            msg = "Failed to collect images. Check SERP_API_KEY."
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
             return None
             
         # Debug: Check which image files actually exist
@@ -1286,7 +1297,9 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
                 logger.warning(f"  ❌ Image {i+1} missing: {img_path}")
         
         if not existing_images:
-            logger.error("No image files actually exist")
+            msg = "No image files actually exist after download."
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
             return None
             
         logger.info(f"Using {len(existing_images)} existing images for video creation")
@@ -1319,7 +1332,9 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         )
         
         if not video_result:
-            logger.error("Failed to create video")
+            msg = "Failed to create video with FFmpeg. Check logs for details."
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
             return None
             
         # video_result is boolean in SimpleVideoService, but we need the path
