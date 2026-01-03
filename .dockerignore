@@ -1,0 +1,45 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.gitignore
+.mypy_cache
+.pytest_cache
+.hypotheses
+
+# Frontend
+frontend/node_modules
+frontend/build
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# Secrets
+.env
+config_local.py
+secrets.py
+youtube_credentials.json
+youtube_token.pickle
+*.pickle
+
+# User Data
+user_data/
+my_channel_info.json
+output/
+temp/
+logs/

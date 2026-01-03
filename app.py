@@ -1341,12 +1341,20 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
 
 # Serve static files (React build)
 # Mount the static directory for JS/CSS
-static_dir = Path("frontend/build/static")
+BASE_DIR = Path(__file__).resolve().parent
+static_dir = BASE_DIR / "frontend" / "build" / "static"
+
 if static_dir.exists():
-    logger.info(f"Mounting static directory: {static_dir.absolute()}")
+    logger.info(f"Mounting static directory: {static_dir}")
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 else:
-    logger.warning(f"Static directory not found at {static_dir.absolute()}")
+    logger.warning(f"Static directory not found at {static_dir}")
+    # List contents of frontend/build to debug
+    build_dir = BASE_DIR / "frontend" / "build"
+    if build_dir.exists():
+        logger.info(f"Contents of {build_dir}: {[x.name for x in build_dir.iterdir()]}")
+    else:
+        logger.warning(f"Build directory not found at {build_dir}")
 
 # Serve manifest.json and other root files if they exist
 @app.get("/manifest.json")
