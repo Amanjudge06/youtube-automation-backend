@@ -145,7 +145,16 @@ class YouTubeUploadService:
             response = requests.post(token_url, data=token_data)
             if response.status_code != 200:
                 logger.error(f"Token exchange failed: {response.text}")
-                return False, None
+                # Fallback for OOB flow (if user is using urn:ietf:wg:oauth:2.0:oob)
+                if "redirect_uri_mismatch" in response.text and "urn:ietf:wg:oauth:2.0:oob" not in config.YOUTUBE_REDIRECT_URI:
+                     logger.info("Retrying with OOB redirect URI")
+                     token_data['redirect_uri'] = "urn:ietf:wg:oauth:2.0:oob"
+                     response = requests.post(token_url, data=token_data)
+                     if response.status_code != 200:
+                         logger.error(f"Token exchange failed again: {response.text}")
+                         return False, None
+                else:
+                    return False, None
             
             token_info = response.json()
             
