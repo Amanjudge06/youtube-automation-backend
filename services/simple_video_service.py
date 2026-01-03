@@ -55,14 +55,35 @@ class SimpleVideoService:
             valid_images = []
             for img_path in image_paths:
                 try:
-                    result = subprocess.run(['file', str(img_path)], capture_output=True, text=True, timeout=5)
-                    if 'image data' in result.stdout.lower() or any(fmt in result.stdout.lower() for fmt in ['jpeg', 'jpg', 'png', 'gif', 'webp']):
-                        valid_images.append(img_path)
-                    else:
-                        logger.warning(f"Skipping invalid image: {img_path}")
+                    # Check if file exists first
+                    if not img_path.exists():
+                        logger.warning(f"Image file not found: {img_path}")
+                        continue
+                        
+                    # Try to use 'file' command if available
+                    try:
+                        result = subprocess.run(['file', str(img_path)], capture_output=True, text=True, timeout=5)
+                        if result.returncode == 0:
+                            if 'image data' in result.stdout.lower() or any(fmt in result.stdout.lower() for fmt in ['jpeg', 'jpg', 'png', 'gif', 'webp']):
+                                valid_images.append(img_path)
+                            else:
+                                logger.warning(f"Skipping invalid image (file check): {img_path}")
+                        else:
+                            # If file command fails but file exists, assume it's valid
+                            logger.warning(f"File command failed for {img_path}, assuming valid")
+                            valid_images.append(img_path)
+                    except FileNotFoundError:
+                        # 'file' command not installed, assume valid if extension matches
+                        if img_path.suffix.lower() in ['.jpg', '.jpeg', '.png', '.webp', '.gif']:
+                            valid_images.append(img_path)
+                        else:
+                            logger.warning(f"Skipping image with unknown extension: {img_path}")
+                            
                 except Exception as e:
                     logger.warning(f"Could not validate image {img_path}: {e}")
-                    valid_images.append(img_path)
+                    # Fallback: assume valid if it exists
+                    if img_path.exists():
+                        valid_images.append(img_path)
             
             if not valid_images:
                 logger.error("No valid images found after filtering")
