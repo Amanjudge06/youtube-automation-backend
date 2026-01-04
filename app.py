@@ -1398,6 +1398,49 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         # Create video using simple service
         video_path = config.OUTPUT_DIR / generate_filename(topic, "mp4")
         
+        # CRITICAL: Validate all inputs before calling FFmpeg
+        logger.info("=== Pre-FFmpeg Validation ===")
+        
+        # Validate audio file
+        if not audio_path.exists():
+            msg = f"Audio file vanished before video creation: {audio_path}"
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
+        
+        audio_size = audio_path.stat().st_size
+        if audio_size < 1000:
+            msg = f"Audio file too small ({audio_size} bytes): {audio_path}"
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
+        
+        logger.info(f"✅ Audio validated: {audio_path} ({audio_size:,} bytes)")
+        
+        # Validate all image files exist and are readable
+        validated_images = []
+        for i, img_path in enumerate(image_paths):
+            if not img_path.exists():
+                logger.error(f"❌ Image {i+1} missing at FFmpeg time: {img_path}")
+                continue
+            
+            img_size = img_path.stat().st_size
+            if img_size < 1000:
+                logger.error(f"❌ Image {i+1} too small ({img_size} bytes): {img_path}")
+                continue
+            
+            validated_images.append(img_path)
+            logger.info(f"✅ Image {i+1} validated: {img_path.name} ({img_size:,} bytes)")
+        
+        if len(validated_images) < 3:
+            msg = f"Only {len(validated_images)} valid images before FFmpeg (need at least 3)"
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
+        
+        logger.info(f"✅ All inputs validated: {len(validated_images)} images, 1 audio file")
+        image_paths = validated_images
+        
         # Get actual audio duration from the generated file
         try:
             import subprocess
@@ -1406,9 +1449,12 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
                 '-of', 'csv=p=0', str(audio_path)
             ], capture_output=True, text=True, timeout=10)
             audio_duration = float(result.stdout.strip()) if result.stdout.strip() else 60.0
-        except:
+            logger.info(f"✅ Audio duration: {audio_duration:.2f} seconds")
+        except Exception as e:
+            logger.warning(f"Could not get audio duration: {e}, using 60s fallback")
             audio_duration = 60.0  # Fallback duration
         
+        logger.info("=== Starting FFmpeg video creation ===")
         try:
             video_result = video_service.create_video_with_ffmpeg(
                 image_paths=[Path(p) for p in image_paths], 
