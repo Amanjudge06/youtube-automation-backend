@@ -153,11 +153,11 @@ class SimpleVideoService:
                 # 1. Scale down to 10% for blur (saves 99% memory on blur buffer)
                 # 2. Use avgblur (faster/lighter)
                 # 3. Scale back up
-                # CRITICAL FIX: Ensure even dimensions for libx264 using trunc(iw/2)*2
+                # CRITICAL FIX: Use scale=-2:-2 to ensure even dimensions (standard FFmpeg syntax)
                 filter_parts.append(
                     f"[{i}:v]scale=108:192:force_original_aspect_ratio=increase,crop=108:192,avgblur=10[bg_small{i}];"
                     f"[bg_small{i}]scale={target_w}:{target_h}[bg{i}];"
-                    f"[{i}:v]scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2[fg{i}];"
+                    f"[{i}:v]scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,scale=-2:-2[fg{i}];"
                     f"[bg{i}][fg{i}]overlay=(W-w)/2:(H-h)/2:shortest=1,setsar=1,"
                     f"zoompan={motion}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={target_w}x{target_h}:fps=30[v{i}]"
                 )
@@ -201,6 +201,10 @@ class SimpleVideoService:
             
             logger.info("Creating video with single-pass filtergraph...")
             logger.info(f"Processing {len(image_paths)} images with alternating motion effects")
+            
+            # Log the command for debugging (truncated)
+            cmd_str = ' '.join(cmd)
+            logger.info(f"FFmpeg command (first 500 chars): {cmd_str[:500]}...")
             
             # Run with stderr capture but also print to stdout for Cloud Run logs
             process = subprocess.Popen(
