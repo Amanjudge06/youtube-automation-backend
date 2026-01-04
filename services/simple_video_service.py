@@ -435,22 +435,43 @@ class SimpleVideoService:
             # Check for hardware encoders based on OS
             if system == 'Darwin':  # macOS
                 if 'h264_videotoolbox' in encoders:
-                    return 'h264_videotoolbox'
+                    if self._test_encoder('h264_videotoolbox'):
+                        return 'h264_videotoolbox'
             elif system == 'Linux':
+                # Test NVIDIA first (fastest if available)
                 if 'h264_nvenc' in encoders:
-                    return 'h264_nvenc'  # NVIDIA
-                elif 'h264_vaapi' in encoders:
-                    return 'h264_vaapi'  # Intel/AMD
+                    if self._test_encoder('h264_nvenc'):
+                        return 'h264_nvenc'
+                # Fallback to VAAPI (Intel/AMD)
+                if 'h264_vaapi' in encoders:
+                    if self._test_encoder('h264_vaapi'):
+                        return 'h264_vaapi'
             elif system == 'Windows':
                 if 'h264_nvenc' in encoders:
-                    return 'h264_nvenc'  # NVIDIA
-                elif 'h264_qsv' in encoders:
-                    return 'h264_qsv'  # Intel Quick Sync
+                    if self._test_encoder('h264_nvenc'):
+                        return 'h264_nvenc'
+                if 'h264_qsv' in encoders:
+                    if self._test_encoder('h264_qsv'):
+                        return 'h264_qsv'
             
             return None  # Fallback to software encoding
         except Exception as e:
             logger.warning(f"Hardware encoder detection failed: {e}")
             return None
+    
+    def _test_encoder(self, encoder_name: str) -> bool:
+        """Test if a hardware encoder actually works"""
+        try:
+            # Try to encode 1 frame with the encoder
+            test_cmd = [
+                'ffmpeg', '-f', 'lavfi', '-i', 'color=c=black:s=1080x1920:d=0.1',
+                '-c:v', encoder_name, '-f', 'null', '-'
+            ]
+            result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=5)
+            return result.returncode == 0
+        except Exception as e:
+            logger.debug(f"Encoder {encoder_name} test failed: {e}")
+            return False
 
 
 def test_ffmpeg_available():
