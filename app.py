@@ -32,6 +32,47 @@ from utils.helpers import setup_logging, get_video_metadata
 setup_logging()
 logger = logging.getLogger(__name__)
 
+# Validate critical environment variables on startup
+def validate_environment():
+    """Check critical API keys are present (not their validity, just existence)"""
+    warnings = []
+    
+    critical_keys = {
+        "SERP_API_KEY": config.SERP_API_KEY,
+        "OPENAI_API_KEY": config.OPENAI_API_KEY,
+        "ELEVENLABS_API_KEY": config.ELEVENLABS_API_KEY,
+    }
+    
+    for key_name, key_value in critical_keys.items():
+        if not key_value or key_value.strip() == "":
+            warnings.append(f"⚠️  {key_name} is not set - automation will fail at {key_name.split('_')[0]} step")
+    
+    if warnings:
+        logger.warning("=" * 60)
+        logger.warning("ENVIRONMENT VALIDATION WARNINGS:")
+        for warning in warnings:
+            logger.warning(warning)
+        logger.warning("Set these as Cloud Run environment variables or in .env file")
+        logger.warning("=" * 60)
+    else:
+        logger.info("✅ All critical API keys are set")
+    
+    # Log optional keys status
+    optional_keys = {
+        "PERPLEXITY_API_KEY": config.PERPLEXITY_API_KEY,
+        "YOUTUBE_REFRESH_TOKEN": config.YOUTUBE_REFRESH_TOKEN,
+    }
+    
+    for key_name, key_value in optional_keys.items():
+        if not key_value or key_value.strip() == "":
+            logger.info(f"ℹ️  {key_name} not set (optional, fallbacks available)")
+
+# Run validation
+try:
+    validate_environment()
+except Exception as e:
+    logger.error(f"Environment validation failed: {e}")
+
 # Initialize Supabase
 supabase_service = SupabaseService()
 
@@ -1218,9 +1259,16 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         automation_status["progress"] = 15
         
         # Get trending topics
-        trending_topics = trends_service.get_trending_topics()
+        try:
+            trending_topics = trends_service.get_trending_topics()
+        except Exception as e:
+            msg = f"Trends service crashed: {str(e)[:200]}"
+            logger.error(msg, exc_info=True)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
+            
         if not trending_topics:
-            msg = "No trending topics found. Check SERP_API_KEY or region settings."
+            msg = "No trending topics found. Check SERP_API_KEY or region settings in Cloud Run environment."
             logger.error(msg)
             automation_status["logs"].append(f"❌ {msg}")
             return None
@@ -1234,9 +1282,18 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         automation_status["progress"] = 30
         
         # Research the topic
-        research_data = research_service.research_trending_topic(topic)
+        try:
+            research_data = research_service.research_trending_topic(topic)
+        except Exception as e:
+            msg = f"Research service crashed for '{topic}': {str(e)[:200]}"
+            logger.error(msg, exc_info=True)
+            automation_status["logs"].append(f"❌ {msg}")
+            # Use fallback research instead of failing
+            logger.warning("Using fallback research data")
+            research_data = research_service._create_fallback_research(topic)
+            
         if not research_data:
-            msg = f"Failed to research topic: {topic}. Check PERPLEXITY_API_KEY."
+            msg = f"Failed to research topic: {topic}. Check PERPLEXITY_API_KEY in environment."
             logger.error(msg)
             automation_status["logs"].append(f"❌ {msg}")
             return None
@@ -1245,12 +1302,21 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         automation_status["progress"] = 45
         
         # Generate script
-        script_data = script_generator.generate_script(selected_topic, research_data)
-        if not script_data:
-            msg = "Failed to generate script. Check OPENAI_API_KEY."
+        try:
+            script_data = script_generator.generate_script(selected_topic, research_data)
+        except Exception as e:
+            msg = f"Script generation crashed: {str(e)[:200]}"
+            logger.error(msg, exc_info=True)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
+            
+        if not script_data or not script_data.get('script'):
+            msg = "Failed to generate script. Check OPENAI_API_KEY in Cloud Run environment."
             logger.error(msg)
             automation_status["logs"].append(f"❌ {msg}")
             return None
+        
+        logger.info(f"Script generated: {len(script_data.get('script', ''))} characters")
             
         automation_status["current_step"] = "Creating voiceover..."
         automation_status["progress"] = 60
@@ -1259,16 +1325,30 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         audio_filename = generate_filename(topic, "mp3")
         audio_path = Path(config.TEMP_DIR) / audio_filename
         
-        success = voiceover_service.generate_voiceover(
-            script_data['script'],
-            audio_path
-        )
+        try:
+            success = voiceover_service.generate_voiceover(
+                script_data['script'],
+                audio_path
+            )
+        except Exception as e:
+            msg = f"Voiceover generation crashed: {str(e)[:200]}"
+            logger.error(msg, exc_info=True)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
         
-        if not success or not audio_path.exists():
-            msg = "Failed to generate voiceover. Check ELEVENLABS_API_KEY."
+        if not success:
+            msg = "Voiceover generation returned False. Check ELEVENLABS_API_KEY and OpenAI API keys."
             logger.error(msg)
             automation_status["logs"].append(f"❌ {msg}")
             return None
+            
+        if not audio_path.exists():
+            msg = f"Audio file not created at {audio_path}. Check disk space and permissions."
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
+        
+        logger.info(f"Voiceover created: {audio_path} ({audio_path.stat().st_size} bytes)")
             
         # Generate Subtitles
         automation_status["current_step"] = "Generating subtitles..."
@@ -1279,9 +1359,16 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         
         # Get images
         scenes = script_data.get('scenes', [])
-        image_paths = image_service.fetch_images_for_scenes(topic, script_data, research_data)
+        try:
+            image_paths = image_service.fetch_images_for_scenes(topic, script_data, research_data)
+        except Exception as e:
+            msg = f"Image collection crashed: {str(e)[:200]}"
+            logger.error(msg, exc_info=True)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
+            
         if not image_paths:
-            msg = "Failed to collect images. Check SERP_API_KEY."
+            msg = "Failed to collect images. Check SERP_API_KEY or network connectivity in Cloud Run."
             logger.error(msg)
             automation_status["logs"].append(f"❌ {msg}")
             return None
@@ -1345,11 +1432,28 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
             automation_status["logs"].append(f"❌ {msg}")
             return None
             
-        # video_result is boolean in SimpleVideoService, but we need the path
-        if video_result:
-             video_path = video_path
-        else:
-             return None
+        # Verify video file was actually created
+        if not video_result:
+            msg = "Video creation returned False - check FFmpeg logs above"
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
+        
+        if not video_path.exists():
+            msg = f"Video file not found at {video_path} even though FFmpeg reported success"
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
+        
+        video_size = video_path.stat().st_size
+        if video_size < 1000:
+            msg = f"Video file too small ({video_size} bytes) - likely corrupted"
+            logger.error(msg)
+            automation_status["logs"].append(f"❌ {msg}")
+            return None
+        
+        logger.info(f"✅ Video created successfully: {video_path} ({video_size:,} bytes)")
+        automation_status["logs"].append(f"✅ Video: {video_path.name} ({video_size:,} bytes)")
             
         # Handle YouTube upload if requested
         if upload_to_youtube:

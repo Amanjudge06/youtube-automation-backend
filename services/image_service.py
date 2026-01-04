@@ -303,7 +303,7 @@ class ImageService:
         # If no images downloaded or too few, create fallback placeholder images
         if len(downloaded_paths) < 3:
             logger.warning(f"Only {len(downloaded_paths)} valid images downloaded. Creating fallback placeholders...")
-            downloaded_paths.extend(self._create_fallback_images(topic_str, output_dir, 8 - len(downloaded_paths)))
+            downloaded_paths.extend(self._create_fallback_images(topic, output_dir, 8 - len(downloaded_paths)))
         
         # Return best images for longer videos
         return downloaded_paths[:14] if len(downloaded_paths) >= 14 else downloaded_paths
