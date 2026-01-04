@@ -132,17 +132,15 @@ class SimpleVideoService:
                 "z='min(zoom+0.001,1.15)'"     # Subtle zoom
             ]
             
-            # Check for Linux (Cloud Run) to use memory-optimized filters
+            # Check for Linux (Cloud Run)
             is_linux = platform.system() == 'Linux'
+            
+            # With 16GB RAM and 4 vCPUs, we can safely use 1080p
+            target_w, target_h = 1080, 1920
+            
             if is_linux:
-                logger.info("🐧 Linux detected: Using memory-optimized filtergraph")
-                # Force lower resolution on Cloud Run to prevent OOM
-                # 720x1280 is still HD but uses 56% less memory than 1080x1920
-                target_w, target_h = 720, 1280
-                logger.info(f"📉 Reducing resolution to {target_w}x{target_h} for stability")
-            else:
-                target_w, target_h = 1080, 1920
-
+                logger.info("🐧 Linux detected: Using optimized filtergraph for performance")
+            
             for i in range(len(image_paths)):
                 # Normalize FIRST: scale + crop (no black bars)
                 # Then apply zoompan for micro-motion
@@ -151,30 +149,17 @@ class SimpleVideoService:
                 frames = int(duration_per_image * 30)  # 30 fps
                 
                 # Complex filter to handle landscape images correctly:
-                if is_linux:
-                    # Memory Optimized for Cloud Run:
-                    # 1. Scale down to 10% for blur (saves 99% memory on blur buffer)
-                    # 2. Use avgblur (faster/lighter)
-                    # 3. Scale back up
-                    filter_parts.append(
-                        f"[{i}:v]scale=72:128:force_original_aspect_ratio=increase,crop=72:128,avgblur=10[bg_small{i}];"
-                        f"[bg_small{i}]scale={target_w}:{target_h}[bg{i}];"
-                        f"[{i}:v]scale={target_w}:{target_h}:force_original_aspect_ratio=decrease[fg{i}];"
-                        f"[bg{i}][fg{i}]overlay=(W-w)/2:(H-h)/2:shortest=1,setsar=1,"
-                        f"zoompan={motion}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={target_w}x{target_h}:fps=30[v{i}]"
-                    )
-                else:
-                    # High Quality for Local/Mac:
-                    # 1. Create blurred background filling the screen
-                    # 2. Scale foreground image to fit width (1080) without cropping
-                    # 3. Overlay foreground on background
-                    # 4. Apply subtle zoom to the result
-                    filter_parts.append(
-                        f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=20:10[bg{i}];"
-                        f"[{i}:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg{i}];"
-                        f"[bg{i}][fg{i}]overlay=(W-w)/2:(H-h)/2:shortest=1,setsar=1,"
-                        f"zoompan={motion}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s=1080x1920:fps=30[v{i}]"
-                    )
+                # We use the optimized blur method for everyone now because it's faster and looks fine
+                # 1. Scale down to 10% for blur (saves 99% memory on blur buffer)
+                # 2. Use avgblur (faster/lighter)
+                # 3. Scale back up
+                filter_parts.append(
+                    f"[{i}:v]scale=108:192:force_original_aspect_ratio=increase,crop=108:192,avgblur=10[bg_small{i}];"
+                    f"[bg_small{i}]scale={target_w}:{target_h}[bg{i}];"
+                    f"[{i}:v]scale={target_w}:{target_h}:force_original_aspect_ratio=decrease[fg{i}];"
+                    f"[bg{i}][fg{i}]overlay=(W-w)/2:(H-h)/2:shortest=1,setsar=1,"
+                    f"zoompan={motion}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={target_w}x{target_h}:fps=30[v{i}]"
+                )
             
             # Concatenate all processed streams
             concat_inputs = ''.join(f'[v{i}]' for i in range(len(image_paths)))
@@ -201,8 +186,8 @@ class SimpleVideoService:
             else:
                 # Software encoding optimization
                 if is_linux:
-                    # Cloud Run: Use ultrafast preset to save CPU time and reduce timeout risk
-                    cmd.extend(['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28'])
+                    # Cloud Run with 4 vCPUs: 'veryfast' is safe and better quality/size than 'ultrafast'
+                    cmd.extend(['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26'])
                 else:
                     cmd.extend(['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26'])
             
