@@ -42,6 +42,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 YOUTUBE_CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID", "")
 YOUTUBE_CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET", "")
 YOUTUBE_REDIRECT_URI = os.getenv("YOUTUBE_REDIRECT_URI", "urn:ietf:wg:oauth:2.0:oob")  # Out-of-band flow for demos
+YOUTUBE_REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN", "")  # For headless authentication on Cloud Run
 
 # ===========================
 # Trending Topics Settings

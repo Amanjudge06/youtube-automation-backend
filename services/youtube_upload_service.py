@@ -254,29 +254,40 @@ class YouTubeUploadService:
                 # Check if we have client credentials
                 if not config.YOUTUBE_CLIENT_ID or not config.YOUTUBE_CLIENT_SECRET:
                     logger.error("YouTube Client ID and Secret not configured")
-                    logger.info("Please set up YouTube API credentials:")
-                    logger.info("1. Go to https://console.cloud.google.com/")
-                    logger.info("2. Create a new project or select existing")
-                    logger.info("3. Enable YouTube Data API v3")
-                    logger.info("4. Create OAuth 2.0 credentials")
-                    logger.info("5. Set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET in config.py")
                     return False
                 
-                # Create credentials JSON
-                client_config = {
-                    "web": {
-                        "client_id": config.YOUTUBE_CLIENT_ID,
-                        "client_secret": config.YOUTUBE_CLIENT_SECRET,
-                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                        "token_uri": "https://oauth2.googleapis.com/token",
-                        "redirect_uris": [config.YOUTUBE_REDIRECT_URI]
+                # Check for refresh token in config (Headless/Cloud Run support)
+                if config.YOUTUBE_REFRESH_TOKEN:
+                    logger.info("Using configured refresh token for authentication...")
+                    creds = Credentials(
+                        None,  # No access token yet
+                        refresh_token=config.YOUTUBE_REFRESH_TOKEN,
+                        token_uri="https://oauth2.googleapis.com/token",
+                        client_id=config.YOUTUBE_CLIENT_ID,
+                        client_secret=config.YOUTUBE_CLIENT_SECRET,
+                        scopes=self.scopes
+                    )
+                    # Force refresh to verify
+                    creds.refresh(Request())
+                else:
+                    # Interactive flow (Local only)
+                    logger.info("Starting YouTube API authentication flow (Interactive)...")
+                    
+                    # Create credentials JSON
+                    client_config = {
+                        "web": {
+                            "client_id": config.YOUTUBE_CLIENT_ID,
+                            "client_secret": config.YOUTUBE_CLIENT_SECRET,
+                            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                            "token_uri": "https://oauth2.googleapis.com/token",
+                            "redirect_uris": [config.YOUTUBE_REDIRECT_URI]
+                        }
                     }
-                }
-                
-                flow = InstalledAppFlow.from_client_config(
-                    client_config, config.YOUTUBE_UPLOAD_SCOPES
-                )
-                creds = flow.run_local_server(port=8080)
+                    
+                    flow = InstalledAppFlow.from_client_config(
+                        client_config, config.YOUTUBE_UPLOAD_SCOPES
+                    )
+                    creds = flow.run_local_server(port=8080)
             
             # Save credentials for next time
             with open(self.token_file, 'wb') as token:

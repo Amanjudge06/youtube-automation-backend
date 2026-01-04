@@ -231,20 +231,20 @@ class SimpleVideoService:
                 
                 return True
             else:
-                logger.error(f"Video creation failed with return code {process.returncode}")
-                logger.error(f"FFmpeg stderr: {stderr}")
-                # Print to stdout for Cloud Run logs visibility
+                error_msg = f"FFmpeg failed with code {process.returncode}: {stderr}"
+                logger.error(error_msg)
                 print(f"FFMPEG ERROR: {stderr}")
-                return False
+                # Raise exception to propagate error to frontend
+                raise Exception(f"Video creation failed: {stderr[-200:] if stderr else 'Unknown FFmpeg error'}")
                 
         except subprocess.TimeoutExpired:
             logger.error("FFmpeg command timed out after 300 seconds")
             if 'process' in locals():
                 process.kill()
-            return False
+            raise Exception("Video creation timed out (300s limit exceeded)")
         except Exception as e:
             logger.error(f"Error creating video: {e}")
-            return False
+            raise e
     
     def _add_subtitles_to_video(self, video_path: Path, script_data: Dict, audio_duration: float, srt_path: Path = None) -> bool:
         """Add burned-in subtitles with bold styling for mobile retention"""

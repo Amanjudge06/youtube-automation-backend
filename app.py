@@ -1322,17 +1322,25 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         except:
             audio_duration = 60.0  # Fallback duration
         
-        video_result = video_service.create_video_with_ffmpeg(
-            image_paths=[Path(p) for p in image_paths], 
-            audio_path=Path(audio_path), 
-            output_path=video_path,
-            audio_duration=audio_duration,
-            script_data=script_data,
-            subtitles_path=subtitles_path
-        )
-        
-        if not video_result:
-            msg = "Failed to create video with FFmpeg. Check logs for details."
+        try:
+            video_result = video_service.create_video_with_ffmpeg(
+                image_paths=[Path(p) for p in image_paths], 
+                audio_path=Path(audio_path), 
+                output_path=video_path,
+                audio_duration=audio_duration,
+                script_data=script_data,
+                subtitles_path=subtitles_path
+            )
+            
+            if not video_result:
+                # This path might not be reached if exception is raised, but keeping for safety
+                msg = "Failed to create video with FFmpeg (Unknown error)"
+                logger.error(msg)
+                automation_status["logs"].append(f"❌ {msg}")
+                return None
+                
+        except Exception as e:
+            msg = f"Video creation failed: {str(e)}"
             logger.error(msg)
             automation_status["logs"].append(f"❌ {msg}")
             return None
