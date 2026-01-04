@@ -84,10 +84,10 @@ function App() {
       await axios.post(`${API_BASE}/automation/trigger`, {
         config: {
           language: 'english',
-          upload_to_youtube: false,
           trending_region: 'AU',
           script_tone: 'energetic',
-          ...config
+          upload_to_youtube: false,
+          ...config  // config overrides defaults (including upload_to_youtube)
         },
         user_id: session?.user?.id
       });
