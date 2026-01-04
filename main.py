@@ -27,6 +27,7 @@ from services.voiceover_service import VoiceoverService
 from services.image_service import ImageService
 from services.simple_video_service import test_ffmpeg_available, SimpleVideoService
 from services.youtube_upload_service import YouTubeUploadService
+from services.supabase_service import SupabaseService
 from utils.helpers import (
     setup_logging,
     generate_filename,
@@ -320,6 +321,44 @@ def main(language="english", upload_to_youtube=False):
                 }
                 save_metadata(video_path, metadata)
         
+        # Sync with Supabase
+        logger.info("\n[BONUS STEP] Syncing with Supabase...")
+        try:
+            supabase_service = SupabaseService()
+            if supabase_service.is_available():
+                # Use provided UUID as default for CLI runs
+                user_id = "e3bdcc94-2efa-479f-9138-44c33790b2d3"
+                
+                # Upload video file
+                storage_path = f"{user_id}/{video_path.name}"
+                logger.info(f"Uploading video to Supabase storage: {storage_path}")
+                public_url = supabase_service.upload_file("videos", storage_path, video_path)
+                
+                if public_url:
+                    # Prepare video data
+                    video_data = {
+                        "title": metadata.get("title", video_path.stem),
+                        "description": metadata.get("description", ""),
+                        "topic": metadata.get("topic", ""),
+                        "file_path": str(video_path),
+                        "storage_path": storage_path,
+                        "status": "completed",
+                        "youtube_url": metadata.get("youtube_upload", {}).get("video_url")
+                    }
+                    
+                    # Save metadata to database
+                    result = supabase_service.save_video_metadata(user_id, video_data)
+                    if result:
+                        logger.info("✅ Synced with Supabase successfully")
+                    else:
+                        logger.warning("⚠️ Failed to save metadata to Supabase")
+                else:
+                    logger.warning("⚠️ Failed to upload video file to Supabase storage")
+            else:
+                logger.warning("⚠️ Supabase not available (check credentials)")
+        except Exception as e:
+            logger.error(f"Supabase sync failed: {e}")
+
         # Cleanup temp files
         logger.info("\nCleaning up temporary files...")
         cleanup_temp_files()

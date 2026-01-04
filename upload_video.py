@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from services.youtube_upload_service import YouTubeUploadService
 from services.research_service import ResearchService
+from services.supabase_service import SupabaseService
 from utils.helpers import setup_logging
 import config
 
@@ -112,6 +113,35 @@ def upload_latest_video():
             print("\n🚀 Your video is now live on YouTube!")
             
             logger.info("✅ Video upload completed successfully")
+            
+            # Sync with Supabase
+            logger.info("Syncing with Supabase...")
+            try:
+                supabase_service = SupabaseService()
+                if supabase_service.is_available():
+                    user_id = "e3bdcc94-2efa-479f-9138-44c33790b2d3"
+                    storage_path = f"{user_id}/{latest_video.name}"
+                    
+                    # Upload file
+                    public_url = supabase_service.upload_file("videos", storage_path, latest_video)
+                    
+                    if public_url:
+                        video_data = {
+                            "title": result['metadata']['optimized_title'],
+                            "description": result['metadata']['optimized_description'],
+                            "topic": topic,
+                            "file_path": str(latest_video),
+                            "storage_path": storage_path,
+                            "status": "completed",
+                            "youtube_url": video_url
+                        }
+                        supabase_service.save_video_metadata(user_id, video_data)
+                        logger.info("✅ Synced with Supabase")
+                    else:
+                        logger.warning("⚠️ Failed to upload to Supabase storage")
+            except Exception as e:
+                logger.error(f"Supabase sync failed: {e}")
+
             return True
         else:
             error = result.get('error', 'Unknown error')
