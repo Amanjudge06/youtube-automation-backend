@@ -43,7 +43,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-def main(language="english", upload_to_youtube=False):
+def main(language="english", upload_to_youtube=True):
     """Main execution flow"""
     start_time = time.time()
     
@@ -732,6 +732,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--upload",
         action="store_true",
+        default=True,  # Default to True
         help="Automatically upload the generated video to YouTube"
     )
     

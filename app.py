@@ -64,7 +64,7 @@ automation_status = {
 # Pydantic models
 class AutomationConfig(BaseModel):
     language: str = "english"
-    upload_to_youtube: bool = False
+    upload_to_youtube: bool = True  # Default to True for auto-upload
     trending_region: str = "AU"
     script_tone: str = "energetic"
 
@@ -1188,7 +1188,7 @@ async def run_automation_async(language: str = "english", upload_to_youtube: boo
         automation_status["logs"].append(f"Error: {str(e)}")
 
 
-def run_automation_web_safe(language: str = "english", upload_to_youtube: bool = False):
+def run_automation_web_safe(language: str = "english", upload_to_youtube: bool = True):
     """Web-safe version of run_automation that returns None on failure instead of sys.exit"""
     try:
         # Set up logging without exiting on errors

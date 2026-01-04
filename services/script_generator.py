@@ -174,7 +174,8 @@ HUMAN AUTHENTICITY RULES:
         prompt_parts.append(f"""
 
 SCRIPT SPECIFICATIONS:
-- Duration: {self.duration} seconds
+- Duration: {self.duration} seconds (CRITICAL: Must be 55-58 seconds long)
+- Word Count: MINIMUM 160 words, MAXIMUM 180 words (Strict limit)
 - Tone: {tone_description} but NATURALLY human
 - Hook Style: {self.hook_style} approach (optimized for performance)
 - Make the viewer feel like they're discovering something with you

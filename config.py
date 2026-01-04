@@ -90,8 +90,8 @@ TRENDING_CONFIG = {
 SCRIPT_CONFIG = {
     "model": "gpt-4o-mini",  # Updated working model (was gpt-4-turbo-preview)
     "temperature": 0.7,
-    "max_tokens": 800,  # Increased for longer scripts
-    "script_duration_seconds": 55,  # Minimum 55 seconds
+    "max_tokens": 1500,  # Increased for longer scripts (approx 1000 words capacity)
+    "script_duration_seconds": 58,  # Target 58 seconds (just under 60s limit)
     "tone": "energetic and engaging",
     "language": "english",  # "english", "hinglish" (hindi+english mix)
     "hinglish_ratio": 0.8,  # 80% Hindi words when using hinglish (0.1=10%, 0.5=50%, 0.8=80%)
