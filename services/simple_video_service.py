@@ -153,10 +153,11 @@ class SimpleVideoService:
                 # 1. Scale down to 10% for blur (saves 99% memory on blur buffer)
                 # 2. Use avgblur (faster/lighter)
                 # 3. Scale back up
+                # CRITICAL FIX: Ensure even dimensions for libx264 using trunc(iw/2)*2
                 filter_parts.append(
                     f"[{i}:v]scale=108:192:force_original_aspect_ratio=increase,crop=108:192,avgblur=10[bg_small{i}];"
                     f"[bg_small{i}]scale={target_w}:{target_h}[bg{i}];"
-                    f"[{i}:v]scale={target_w}:{target_h}:force_original_aspect_ratio=decrease[fg{i}];"
+                    f"[{i}:v]scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2[fg{i}];"
                     f"[bg{i}][fg{i}]overlay=(W-w)/2:(H-h)/2:shortest=1,setsar=1,"
                     f"zoompan={motion}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={target_w}x{target_h}:fps=30[v{i}]"
                 )
@@ -186,8 +187,8 @@ class SimpleVideoService:
             else:
                 # Software encoding optimization
                 if is_linux:
-                    # Cloud Run with 4 vCPUs: 'veryfast' is safe and better quality/size than 'ultrafast'
-                    cmd.extend(['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26'])
+                    # Cloud Run: Use ultrafast preset for maximum stability
+                    cmd.extend(['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28'])
                 else:
                     cmd.extend(['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26'])
             
@@ -201,9 +202,17 @@ class SimpleVideoService:
             logger.info("Creating video with single-pass filtergraph...")
             logger.info(f"Processing {len(image_paths)} images with alternating motion effects")
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            # Run with stderr capture but also print to stdout for Cloud Run logs
+            process = subprocess.Popen(
+                cmd, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE,
+                text=True
+            )
             
-            if result.returncode == 0:
+            stdout, stderr = process.communicate(timeout=300)
+            
+            if process.returncode == 0:
                 logger.info("🎬 Video created successfully with production-grade pipeline!")
                 
                 # Add subtitles if provided (PRIORITY)
@@ -218,11 +227,16 @@ class SimpleVideoService:
                 
                 return True
             else:
-                logger.error(f"Video creation failed: {result.stderr}")
+                logger.error(f"Video creation failed with return code {process.returncode}")
+                logger.error(f"FFmpeg stderr: {stderr}")
+                # Print to stdout for Cloud Run logs visibility
+                print(f"FFMPEG ERROR: {stderr}")
                 return False
                 
         except subprocess.TimeoutExpired:
-            logger.error("FFmpeg command timed out")
+            logger.error("FFmpeg command timed out after 300 seconds")
+            if 'process' in locals():
+                process.kill()
             return False
         except Exception as e:
             logger.error(f"Error creating video: {e}")
