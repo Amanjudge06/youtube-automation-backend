@@ -1210,10 +1210,12 @@ async def run_automation_async(language: str = "english", upload_to_youtube: boo
                         automation_status["logs"].append(f"⚠️ Cloud sync failed: {e}")
 
                 automation_status["running"] = False
-                automation_status["current_step"] = "Completed successfully!"
+                automation_status["current_step"] = "✅ Completed! Video created successfully"
                 automation_status["progress"] = 100
                 automation_status["last_run"] = datetime.now().isoformat()
-                automation_status["logs"].append(f"Video created: {video_path}")
+                if video_path:
+                    automation_status["logs"].append(f"✅ Video saved: {Path(video_path).name}")
+                    automation_status["video_path"] = str(video_path)
             else:
                 raise Exception("Video creation failed - no output file generated")
                 
@@ -1255,8 +1257,8 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         image_service = ImageService()
         video_service = SimpleVideoService()  # Use optimized simple video service
         
-        automation_status["current_step"] = "Fetching trending topics..."
-        automation_status["progress"] = 15
+        automation_status["current_step"] = "Step 1/6: Fetching trending topics..."
+        automation_status["progress"] = 10
         
         # Get trending topics
         try:
@@ -1277,9 +1279,10 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         topic = selected_topic['query']
         logger.info(f"Selected trending topic: {topic}")
         automation_status["logs"].append(f"✅ Selected topic: {topic}")
+        automation_status["progress"] = 16
         
-        automation_status["current_step"] = "Researching topic..."
-        automation_status["progress"] = 30
+        automation_status["current_step"] = "Step 2/6: Researching topic..."
+        automation_status["progress"] = 25
         
         # Research the topic
         try:
@@ -1297,9 +1300,12 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
             logger.error(msg)
             automation_status["logs"].append(f"❌ {msg}")
             return None
-            
-        automation_status["current_step"] = "Generating script..."
-        automation_status["progress"] = 45
+        
+        automation_status["logs"].append(f"✅ Research completed")
+        automation_status["progress"] = 33
+        
+        automation_status["current_step"] = "Step 3/6: Generating script..."
+        automation_status["progress"] = 40
         
         # Generate script
         try:
@@ -1317,9 +1323,11 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
             return None
         
         logger.info(f"Script generated: {len(script_data.get('script', ''))} characters")
+        automation_status["logs"].append(f"✅ Script generated ({len(script_data.get('script', ''))} chars)")
+        automation_status["progress"] = 50
             
-        automation_status["current_step"] = "Creating voiceover..."
-        automation_status["progress"] = 60
+        automation_status["current_step"] = "Step 4/6: Creating voiceover..."
+        automation_status["progress"] = 55
         
         # Generate voiceover
         audio_filename = generate_filename(topic, "mp3")
@@ -1349,13 +1357,17 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
             return None
         
         logger.info(f"Voiceover created: {audio_path} ({audio_path.stat().st_size} bytes)")
+        automation_status["logs"].append(f"✅ Voiceover created")
+        automation_status["progress"] = 60
             
         # Generate Subtitles
         automation_status["current_step"] = "Generating subtitles..."
         subtitles_path = voiceover_service.generate_subtitles(audio_path)
+        automation_status["logs"].append(f"✅ Subtitles generated")
+        automation_status["progress"] = 65
             
-        automation_status["current_step"] = "Collecting images..."
-        automation_status["progress"] = 75
+        automation_status["current_step"] = "Step 5/6: Collecting images..."
+        automation_status["progress"] = 70
         
         # Get images
         scenes = script_data.get('scenes', [])
@@ -1391,9 +1403,11 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
             
         logger.info(f"Using {len(existing_images)} existing images for video creation")
         image_paths = existing_images
+        automation_status["logs"].append(f"✅ Collected {len(existing_images)} images")
+        automation_status["progress"] = 80
             
-        automation_status["current_step"] = "Assembling video..."
-        automation_status["progress"] = 90
+        automation_status["current_step"] = "Step 6/6: Assembling video..."
+        automation_status["progress"] = 85
         
         # Create video using simple service
         video_path = config.OUTPUT_DIR / generate_filename(topic, "mp4")
@@ -1499,12 +1513,13 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
             return None
         
         logger.info(f"✅ Video created successfully: {video_path} ({video_size:,} bytes)")
-        automation_status["logs"].append(f"✅ Video: {video_path.name} ({video_size:,} bytes)")
+        automation_status["logs"].append(f"✅ Video created: {video_path.name}")
+        automation_status["progress"] = 90
             
         # Handle YouTube upload if requested
         if upload_to_youtube:
             automation_status["current_step"] = "Uploading to YouTube..."
-            automation_status["progress"] = 95
+            automation_status["progress"] = 92
             
             try:
                 # Create metadata file for upload  
@@ -1537,14 +1552,20 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
                 )
                 
                 if upload_result.get('success'):
-                    logger.info(f"Video uploaded successfully: {upload_result.get('video_url', 'N/A')}")
+                    video_url = upload_result.get('video_url', 'N/A')
+                    logger.info(f"Video uploaded successfully: {video_url}")
+                    automation_status["logs"].append(f"✅ Uploaded to YouTube: {video_url}")
+                    automation_status["youtube_url"] = video_url
                 else:
                     logger.warning(f"YouTube upload failed: {upload_result.get('error', 'Unknown error')}, but video was created locally")
+                    automation_status["logs"].append(f"⚠️ YouTube upload failed, video saved locally")
                     
             except Exception as e:
                 logger.warning(f"YouTube upload failed: {e}, but video was created locally")
+                automation_status["logs"].append(f"⚠️ YouTube upload failed: {str(e)[:100]}")
         
         automation_status["progress"] = 100
+        automation_status["video_path"] = str(video_path)
         return str(video_path)
         
     except Exception as e:

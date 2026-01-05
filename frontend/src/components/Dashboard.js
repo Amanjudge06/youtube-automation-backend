@@ -46,6 +46,24 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
     };
 
     fetchData();
+
+    // Poll for status updates when automation is running
+    let pollInterval;
+    if (status.running) {
+      pollInterval = setInterval(async () => {
+        try {
+          const response = await fetch('/api/status');
+          const data = await response.json();
+          // Status updates will come from parent via onTriggerAutomation
+        } catch (error) {
+          console.error('Error polling status:', error);
+        }
+      }, 2000); // Poll every 2 seconds
+    }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [status.running]); // Refresh when automation status changes
 
   const StatCard = ({ title, value, icon: Icon, color = "blue", subtitle }) => (
@@ -122,15 +140,63 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
           </div>
           
           <div className="space-y-2">
-            <p className="text-sm text-blue-700">{status.current_step}</p>
-            <div className="w-full bg-blue-200 rounded-full h-2">
+            <p className="text-sm font-medium text-blue-700">{status.current_step}</p>
+            <div className="w-full bg-blue-200 rounded-full h-3">
               <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                className="bg-blue-600 h-3 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
                 style={{ width: `${status.progress}%` }}
-              ></div>
+              >
+                <span className="text-xs text-white font-medium">{status.progress}%</span>
+              </div>
             </div>
-            <p className="text-xs text-blue-600">{status.progress}% complete</p>
+            
+            {/* Show recent logs */}
+            {status.logs && status.logs.length > 0 && (
+              <div className="mt-3 bg-white rounded p-3 max-h-32 overflow-y-auto">
+                <p className="text-xs font-medium text-gray-600 mb-1">Recent Activity:</p>
+                <div className="space-y-1">
+                  {status.logs.slice(-5).map((log, idx) => (
+                    <p key={idx} className="text-xs text-gray-700">{log}</p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* Success Message with YouTube Link */}
+      {!status.running && status.progress === 100 && status.youtube_url && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2 mb-2">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <span className="font-medium text-green-900">Video Created & Uploaded Successfully!</span>
+          </div>
+          <p className="text-sm text-green-700 mb-3">
+            Your video has been generated and uploaded to YouTube.
+          </p>
+          <a
+            href={status.youtube_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Youtube className="w-4 h-4 mr-2" />
+            Watch on YouTube
+          </a>
+        </div>
+      )}
+
+      {/* Success Message without YouTube */}
+      {!status.running && status.progress === 100 && !status.youtube_url && status.video_path && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2 mb-2">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <span className="font-medium text-green-900">Video Created Successfully!</span>
+          </div>
+          <p className="text-sm text-green-700">
+            Your video has been generated and saved locally.
+          </p>
         </div>
       )}
 
