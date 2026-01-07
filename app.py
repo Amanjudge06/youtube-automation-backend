@@ -26,6 +26,7 @@ from services.trends_service import TrendsService
 from services.youtube_upload_service import YouTubeUploadService
 from services.content_optimization_service import ContentOptimizationService
 from services.supabase_service import SupabaseService
+from services.scheduler_service import get_scheduler
 from utils.helpers import setup_logging, get_video_metadata
 
 # Setup logging
@@ -134,6 +135,39 @@ class OptimizationRequest(BaseModel):
 
 class OptimizationApply(BaseModel):
     recommendations: List[Dict]
+
+class ScheduleCreate(BaseModel):
+    schedule_time: str  # "HH:MM" format
+    timezone: str = "UTC"
+    config: Dict = {}
+
+class ScheduleUpdate(BaseModel):
+    schedule_time: Optional[str] = None
+    timezone: Optional[str] = None
+    config: Optional[Dict] = None
+    active: Optional[bool] = None
+
+# Initialize scheduler on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    logger.info("🚀 Starting Snip-Z application...")
+    try:
+        scheduler = get_scheduler()
+        logger.info("✅ Scheduler service initialized")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize scheduler: {e}")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown"""
+    logger.info("🛑 Shutting down Snip-Z application...")
+    try:
+        scheduler = get_scheduler()
+        scheduler.shutdown()
+        logger.info("✅ Scheduler service stopped")
+    except Exception as e:
+        logger.error(f"Error stopping scheduler: {e}")
 
 # Optimization Endpoints (Frontend Compatible)
 @app.get("/optimization/my-channel")
@@ -1597,6 +1631,110 @@ async def manifest():
 @app.get("/favicon.ico")
 async def favicon():
     return FileResponse("frontend/build/favicon.ico") if Path("frontend/build/favicon.ico").exists() else Response(status_code=404)
+
+# ===============================================
+# Schedule Management API Endpoints
+# ===============================================
+
+@app.post("/api/schedules")
+async def create_schedule(schedule: ScheduleCreate, user_id: str = "demo_user"):
+    """Create a new automation schedule"""
+    try:
+        scheduler = get_scheduler()
+        new_schedule = scheduler.create_schedule(
+            user_id=user_id,
+            schedule_time=schedule.schedule_time,
+            timezone=schedule.timezone,
+            config=schedule.config
+        )
+        return {"success": True, "schedule": new_schedule}
+    except Exception as e:
+        logger.error(f"Error creating schedule: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/schedules")
+async def get_schedules(user_id: str = "demo_user"):
+    """Get all schedules for a user"""
+    try:
+        scheduler = get_scheduler()
+        schedules = scheduler.get_user_schedules(user_id)
+        return {"success": True, "schedules": schedules, "total": len(schedules)}
+    except Exception as e:
+        logger.error(f"Error getting schedules: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/schedules/{schedule_id}")
+async def get_schedule(schedule_id: str):
+    """Get a specific schedule"""
+    try:
+        scheduler = get_scheduler()
+        schedule = scheduler.get_schedule(schedule_id)
+        if not schedule:
+            raise HTTPException(status_code=404, detail="Schedule not found")
+        return {"success": True, "schedule": schedule}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting schedule: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/schedules/{schedule_id}")
+async def update_schedule(schedule_id: str, update: ScheduleUpdate):
+    """Update an existing schedule"""
+    try:
+        scheduler = get_scheduler()
+        updated_schedule = scheduler.update_schedule(
+            schedule_id=schedule_id,
+            schedule_time=update.schedule_time,
+            timezone=update.timezone,
+            config=update.config,
+            active=update.active
+        )
+        return {"success": True, "schedule": updated_schedule}
+    except Exception as e:
+        logger.error(f"Error updating schedule: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/api/schedules/{schedule_id}")
+async def delete_schedule(schedule_id: str):
+    """Delete a schedule"""
+    try:
+        scheduler = get_scheduler()
+        success = scheduler.delete_schedule(schedule_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Schedule not found")
+        return {"success": True, "message": "Schedule deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting schedule: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/schedules/{schedule_id}/toggle")
+async def toggle_schedule(schedule_id: str, active: bool = True):
+    """Enable or disable a schedule"""
+    try:
+        scheduler = get_scheduler()
+        updated_schedule = scheduler.toggle_schedule(schedule_id, active)
+        return {"success": True, "schedule": updated_schedule}
+    except Exception as e:
+        logger.error(f"Error toggling schedule: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/schedules/all/admin")
+async def get_all_schedules():
+    """Get all schedules (admin endpoint)"""
+    try:
+        scheduler = get_scheduler()
+        schedules = scheduler.get_all_schedules()
+        return {"success": True, "schedules": schedules, "total": len(schedules)}
+    except Exception as e:
+        logger.error(f"Error getting all schedules: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ===============================================
+# End Schedule Management API
+# ===============================================
 
 # Catch-all route for React Router (must be last)
 @app.get("/{full_path:path}")

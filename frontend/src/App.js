@@ -8,6 +8,7 @@ import TrendingTopics from './components/TrendingTopics';
 import Settings from './components/Settings';
 import Logs from './components/Logs';
 import Optimization from './components/Optimization';
+import ScheduleManager from './components/ScheduleManager';
 import { 
   Home, 
   Video, 
@@ -18,7 +19,8 @@ import {
   Square,
   Youtube,
   Brain,
-  LogOut
+  LogOut,
+  Calendar
 } from 'lucide-react';
 
 const API_BASE = '/api';
@@ -111,6 +113,7 @@ function App() {
 
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: Home },
+    { id: 'schedules', name: 'Schedules', icon: Calendar },
     { id: 'videos', name: 'Video Library', icon: Video },
     { id: 'trending', name: 'Trending Topics', icon: TrendingUp },
     { id: 'optimization', name: 'AI Optimization', icon: Brain },
@@ -204,7 +207,8 @@ function App() {
                 onTriggerAutomation={triggerAutomation}
                 onStopAutomation={stopAutomation}
               />
-            )}
+            )}schedules' && <ScheduleManager userId={session?.user?.id || 'demo_user'} />}
+            {activeTab === '
             {activeTab === 'videos' && <VideoLibrary />}
             {activeTab === 'trending' && <TrendingTopics />}
             {activeTab === 'optimization' && <Optimization />}
