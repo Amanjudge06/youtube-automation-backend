@@ -207,8 +207,8 @@ function App() {
                 onTriggerAutomation={triggerAutomation}
                 onStopAutomation={stopAutomation}
               />
-            )}schedules' && <ScheduleManager userId={session?.user?.id || 'demo_user'} />}
-            {activeTab === '
+            )}
+            {activeTab === 'schedules' && <ScheduleManager userId={session?.user?.id || 'demo_user'} />}
             {activeTab === 'videos' && <VideoLibrary />}
             {activeTab === 'trending' && <TrendingTopics />}
             {activeTab === 'optimization' && <Optimization />}
