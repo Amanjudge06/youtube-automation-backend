@@ -62,9 +62,11 @@ def main(language="english", upload_to_youtube=True):
         sys.exit(1)
     
     # Check FFmpeg availability
+    logger.info("Checking FFmpeg availability...")
     if not test_ffmpeg_available():
         logger.error("FFmpeg not found. Please install FFmpeg: brew install ffmpeg")
         sys.exit(1)
+    logger.info("FFmpeg is available and working")
     
     try:
         # Step 1: Get Single Top Active Trending Topic

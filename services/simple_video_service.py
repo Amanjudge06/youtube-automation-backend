@@ -479,6 +479,16 @@ def test_ffmpeg_available():
     try:
         result = subprocess.run(['ffmpeg', '-version'], 
                               capture_output=True, text=True, timeout=10)
-        return result.returncode == 0
-    except:
+        if result.returncode == 0:
+            return True
+        else:
+            print(f"FFmpeg check failed with return code: {result.returncode}")
+            print(f"stdout: {result.stdout}")
+            print(f"stderr: {result.stderr}")
+            return False
+    except FileNotFoundError:
+        print("FFmpeg executable not found in PATH")
+        return False
+    except Exception as e:
+        print(f"FFmpeg check exception: {type(e).__name__}: {e}")
         return False
