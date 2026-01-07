@@ -13,6 +13,7 @@ from apscheduler.jobstores.memory import MemoryJobStore
 import pytz
 import json
 from pathlib import Path
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,21 @@ class SchedulerService:
         
         # Store schedule metadata
         self.schedules = {}  # {schedule_id: schedule_config}
-        self.storage_file = Path("user_data/schedules.json")
+        
+        # Use Supabase if available, fallback to local JSON
+        self.use_supabase = bool(os.getenv('SUPABASE_URL') and os.getenv('SUPABASE_KEY'))
+        if self.use_supabase:
+            try:
+                from services.supabase_service import SupabaseService
+                self.supabase = SupabaseService()
+                logger.info("📊 Using Supabase for schedule persistence")
+            except Exception as e:
+                logger.warning(f"Supabase init failed, using local storage: {e}")
+                self.use_supabase = False
+                self.storage_file = Path("user_data/schedules.json")
+        else:
+            self.storage_file = Path("user_data/schedules.json")
+            logger.info("📁 Using local file for schedule persistence")
         
         # Load saved schedules
         self._load_schedules()
@@ -46,27 +61,72 @@ class SchedulerService:
             logger.info("✅ Scheduler service started")
     
     def _load_schedules(self):
-        """Load schedules from storage"""
+        """Load schedules from storage (Supabase or local file)"""
         try:
-            if self.storage_file.exists():
-                with open(self.storage_file, 'r') as f:
-                    self.schedules = json.load(f)
-                logger.info(f"📂 Loaded {len(self.schedules)} saved schedules")
-                
-                # Restore active schedules
-                for schedule_id, schedule in self.schedules.items():
-                    if schedule.get('active', False):
-                        self._add_job_to_scheduler(schedule_id, schedule)
+            if self.use_supabase:
+                # Load from Supabase
+                result = self.supabase.client.table('schedules').select('*').execute()
+                if result.data:
+                    for row in result.data:
+                        schedule_id = row['schedule_id']
+                        self.schedules[schedule_id] = {
+                            'id': schedule_id,
+                            'user_id': row['user_id'],
+                            'schedule_time': row['schedule_time'],
+                            'hour': row['hour'],
+                            'minute': row['minute'],
+                            'timezone': row['timezone'],
+                            'config': row.get('config', {}),
+                            'active': row.get('active', True),
+                            'created_at': row.get('created_at'),
+                            'last_run': row.get('last_run'),
+                            'next_run': None,
+                            'run_count': row.get('run_count', 0),
+                            'last_result': row.get('last_result')
+                        }
+                    logger.info(f"📂 Loaded {len(self.schedules)} schedules from Supabase")
+            else:
+                # Load from local file
+                if self.storage_file.exists():
+                    with open(self.storage_file, 'r') as f:
+                        self.schedules = json.load(f)
+                    logger.info(f"📂 Loaded {len(self.schedules)} schedules from local file")
+            
+            # Restore active schedules to APScheduler
+            for schedule_id, schedule in self.schedules.items():
+                if schedule.get('active', False):
+                    self._add_job_to_scheduler(schedule_id, schedule)
+                    
         except Exception as e:
             logger.error(f"Error loading schedules: {e}")
             self.schedules = {}
     
     def _save_schedules(self):
-        """Save schedules to storage"""
+        """Save schedules to storage (Supabase or local file)"""
         try:
-            self.storage_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.storage_file, 'w') as f:
-                json.dump(self.schedules, f, indent=2)
+            if self.use_supabase:
+                # Save to Supabase - upsert all schedules
+                for schedule_id, schedule in self.schedules.items():
+                    data = {
+                        'schedule_id': schedule_id,
+                        'user_id': schedule['user_id'],
+                        'schedule_time': schedule['schedule_time'],
+                        'hour': schedule['hour'],
+                        'minute': schedule['minute'],
+                        'timezone': schedule['timezone'],
+                        'config': schedule.get('config', {}),
+                        'active': schedule.get('active', True),
+                        'created_at': schedule.get('created_at'),
+                        'last_run': schedule.get('last_run'),
+                        'run_count': schedule.get('run_count', 0),
+                        'last_result': schedule.get('last_result')
+                    }
+                    self.supabase.client.table('schedules').upsert(data, on_conflict='schedule_id').execute()
+            else:
+                # Save to local file
+                self.storage_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(self.storage_file, 'w') as f:
+                    json.dump(self.schedules, f, indent=2)
         except Exception as e:
             logger.error(f"Error saving schedules: {e}")
     
@@ -302,9 +362,17 @@ class SchedulerService:
             except:
                 pass
             
-            # Remove from storage
+            # Remove from memory
             del self.schedules[schedule_id]
-            self._save_schedules()
+            
+            # Remove from persistent storage
+            if self.use_supabase:
+                try:
+                    self.supabase.client.table('schedules').delete().eq('schedule_id', schedule_id).execute()
+                except Exception as e:
+                    logger.error(f"Error deleting from Supabase: {e}")
+            else:
+                self._save_schedules()
             
             logger.info(f"🗑️ Deleted schedule {schedule_id}")
             return True
