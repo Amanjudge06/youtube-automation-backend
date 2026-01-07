@@ -34,8 +34,11 @@ class YouTubeUploadService:
         self.youtube_service = None
         self.credentials_file = config.BASE_DIR / "youtube_credentials.json"
         self.token_file = config.BASE_DIR / "youtube_token.pickle"
-        self.scopes = ['https://www.googleapis.com/auth/youtube.upload', 
-                      'https://www.googleapis.com/auth/youtube.readonly']
+        self.scopes = [
+            'https://www.googleapis.com/auth/youtube.upload',
+            'https://www.googleapis.com/auth/youtube.readonly',
+            'https://www.googleapis.com/auth/youtube.force-ssl'  # Full YouTube access
+        ]
     
     def _get_client_config(self):
         """Get client configuration from file or environment variables"""
