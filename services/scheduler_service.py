@@ -105,8 +105,8 @@ class SchedulerService:
                 timezone = "UTC"
                 tz = pytz.UTC
             
-            # Generate schedule ID
-            schedule_id = f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            # Generate schedule ID with microseconds to ensure uniqueness
+            schedule_id = f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
             
             # Default config
             if config is None:
@@ -313,8 +313,19 @@ class SchedulerService:
             logger.error(f"Error deleting schedule: {e}")
             return False
     
-    def toggle_schedule(self, schedule_id: str, active: bool) -> Dict:
-        """Enable or disable a schedule"""
+    def toggle_schedule(self, schedule_id: str, active: bool = None) -> Dict:
+        """
+        Enable or disable a schedule
+        If active is None, it will toggle the current state
+        """
+        schedule = self.schedules.get(schedule_id)
+        if not schedule:
+            raise ValueError(f"Schedule {schedule_id} not found")
+        
+        # If active not specified, toggle current state
+        if active is None:
+            active = not schedule.get('active', True)
+        
         return self.update_schedule(schedule_id, active=active)
     
     def _get_next_run_time(self, schedule_id: str) -> Optional[str]:
