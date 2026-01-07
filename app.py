@@ -109,6 +109,7 @@ class AutomationConfig(BaseModel):
     upload_to_youtube: bool = True  # Default to True for auto-upload
     trending_region: str = "AU"
     script_tone: str = "energetic"
+    custom_topic: Optional[str] = None
 
 class TriggerAutomation(BaseModel):
     config: AutomationConfig
@@ -1077,7 +1078,8 @@ async def trigger_automation(request: TriggerAutomation, background_tasks: Backg
         run_automation_async,
         request.config.language,
         request.config.upload_to_youtube,
-        request.user_id
+        request.user_id,
+        request.config.custom_topic
     )
     
     return {"message": "Automation started", "status": automation_status}
@@ -1197,15 +1199,15 @@ async def update_config(config_update: Dict):
         raise HTTPException(status_code=500, detail=f"Failed to update config: {e}")
 
 # Background task for automation
-async def run_automation_async(language: str = "english", upload_to_youtube: bool = False, user_id: str = None):
+async def run_automation_async(language: str = "english", upload_to_youtube: bool = False, user_id: str = None, custom_topic: str = None):
     """Run automation in the background and update status"""
     try:
-        automation_status["current_step"] = "Fetching trending topics..."
+        automation_status["current_step"] = "Starting automation..."
         automation_status["progress"] = 10
         
         # Run the actual automation with web-safe error handling
         try:
-            video_path = run_automation_web_safe(language, upload_to_youtube)
+            video_path = run_automation_web_safe(language, upload_to_youtube, custom_topic)
             
             if video_path:
                 # Upload to Supabase if user_id is provided
@@ -1265,7 +1267,7 @@ async def run_automation_async(language: str = "english", upload_to_youtube: boo
         automation_status["logs"].append(f"Error: {str(e)}")
 
 
-def run_automation_web_safe(language: str = "english", upload_to_youtube: bool = True):
+def run_automation_web_safe(language: str = "english", upload_to_youtube: bool = True, custom_topic: str = None):
     """Web-safe version of run_automation that returns None on failure instead of sys.exit"""
     try:
         # Set up logging without exiting on errors
@@ -1291,10 +1293,21 @@ def run_automation_web_safe(language: str = "english", upload_to_youtube: bool =
         image_service = ImageService()
         video_service = SimpleVideoService()  # Use optimized simple video service
         
-        automation_status["current_step"] = "Step 1/6: Fetching trending topics..."
-        automation_status["progress"] = 10
-        
-        # Get trending topics
+        # Determine topic source
+        if custom_topic and custom_topic.strip():
+            # Use custom topic
+            automation_status["current_step"] = f"Using custom topic: {custom_topic}"
+            automation_status["progress"] = 15
+            topic = custom_topic.strip()
+            logger.info(f"Using custom topic: {topic}")
+            automation_status["logs"].append(f"📌 Custom topic: {topic}")
+            selected_topic = {'query': topic, 'virality_score': 100}
+        else:
+            # Get trending topics
+            automation_status["current_step"] = "Step 1/6: Fetching trending topics..."
+            automation_status["progress"] = 10
+            
+        # Get trending topics (only if no custom topic)
         try:
             trending_topics = trends_service.get_trending_topics()
         except Exception as e:

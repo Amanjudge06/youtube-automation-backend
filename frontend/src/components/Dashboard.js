@@ -20,7 +20,8 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
     language: 'english',
     upload_to_youtube: false,
     trending_region: 'AU',
-    script_tone: 'energetic'
+    script_tone: 'energetic',
+    custom_topic: ''
   });
 
   const [recentVideos, setRecentVideos] = useState([]);
@@ -95,6 +96,39 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
           <h1 className="text-2xl font-bold text-gray-900">Snip-Z Dashboard</h1>
           <p className="text-gray-600">Monitor and control your YouTube automation</p>
         </div>
+      </div>
+
+      {/* Custom Topic Section */}
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 border border-purple-200">
+        <div className="flex items-center space-x-2 mb-4">
+          <Target className="w-5 h-5 text-purple-600" />
+          <h2 className="text-lg font-semibold text-gray-900">Create Video on Custom Topic</h2>
+        </div>
+        <div className="flex items-center space-x-3">
+          <input
+            type="text"
+            value={config.custom_topic}
+            onChange={(e) => setConfig({...config, custom_topic: e.target.value})}
+            placeholder="Enter your custom topic (e.g., 'History of Pizza', 'Space Exploration')..."
+            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+          <button
+            onClick={() => onTriggerAutomation({...config, custom_topic: config.custom_topic})}
+            disabled={status.running || !config.custom_topic.trim()}
+            className="flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Play className="w-4 h-4 mr-2" />
+            Generate Video
+          </button>
+        </div>
+        <p className="text-xs text-gray-600 mt-2">Or use trending topics below for automated content</p>
+      </div>
+
+      {/* Quick Start with Trending Topics */}
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Auto-Generate from Trends</h2>
+        </div>
         
         {/* Advanced Controls */}
         <div className="flex items-center space-x-4">
@@ -118,12 +152,12 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
           </label>
           
           <button
-            onClick={() => onTriggerAutomation(config)}
+            onClick={() => onTriggerAutomation({...config, custom_topic: ''})}
             disabled={status.running}
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Play className="w-4 h-4 mr-2" />
-            Start Automation
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Auto from Trends
           </button>
         </div>
       </div>
