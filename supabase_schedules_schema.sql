@@ -26,24 +26,23 @@ CREATE INDEX IF NOT EXISTS idx_schedules_active ON schedules(active);
 -- Enable Row Level Security
 ALTER TABLE schedules ENABLE ROW LEVEL SECURITY;
 
--- Policy: Users can only access their own schedules
-CREATE POLICY "Users can view their own schedules"
-    ON schedules FOR SELECT
-    USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
+-- Drop old restrictive policies if they exist
+DROP POLICY IF EXISTS "Users can view their own schedules" ON schedules;
+DROP POLICY IF EXISTS "Users can insert their own schedules" ON schedules;
+DROP POLICY IF EXISTS "Users can update their own schedules" ON schedules;
+DROP POLICY IF EXISTS "Users can delete their own schedules" ON schedules;
+DROP POLICY IF EXISTS "Allow demo_user full access" ON schedules;
 
-CREATE POLICY "Users can insert their own schedules"
-    ON schedules FOR INSERT
-    WITH CHECK (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
-
-CREATE POLICY "Users can update their own schedules"
-    ON schedules FOR UPDATE
-    USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
-
-CREATE POLICY "Users can delete their own schedules"
-    ON schedules FOR DELETE
-    USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
-
--- For demo_user (temporary policy for testing)
-CREATE POLICY "Allow demo_user full access"
+-- Create permissive policies for all authenticated users
+CREATE POLICY "Allow authenticated users full access"
     ON schedules FOR ALL
-    USING (user_id = 'demo_user');
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
+-- Also allow public/anon access (for users not logged in via Supabase auth)
+CREATE POLICY "Allow public access"
+    ON schedules FOR ALL
+    TO anon
+    USING (true)
+    WITH CHECK (true);

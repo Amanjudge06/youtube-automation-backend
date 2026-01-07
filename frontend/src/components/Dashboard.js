@@ -13,6 +13,8 @@ import {
   Settings
 } from 'lucide-react';
 
+const API_BASE = process.env.REACT_APP_API_URL || '';
+
 const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
   const [config, setConfig] = useState({
     language: 'english',
@@ -32,16 +34,18 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
     // Fetch recent videos and stats
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/videos');
+        const response = await fetch(`${API_BASE}/api/videos`);
+        if (!response.ok) throw new Error('Failed to fetch videos');
         const data = await response.json();
-        setRecentVideos(data.videos.slice(0, 5)); // Show only last 5
+        setRecentVideos(data.videos?.slice(0, 5) || []); // Show only last 5
         setStats({
-          total_videos: data.total,
+          total_videos: data.total || 0,
           success_rate: 95, // Mock data
           avg_duration: 58 // Mock data
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        setRecentVideos([]);
       }
     };
 
@@ -52,9 +56,11 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
     if (status.running) {
       pollInterval = setInterval(async () => {
         try {
-          const response = await fetch('/api/status');
-          const data = await response.json();
-          // Status updates will come from parent via onTriggerAutomation
+          const response = await fetch(`${API_BASE}/api/status`);
+          if (response.ok) {
+            const data = await response.json();
+            // Status updates will come from parent via onTriggerAutomation
+          }
         } catch (error) {
           console.error('Error polling status:', error);
         }

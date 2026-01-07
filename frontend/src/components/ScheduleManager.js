@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, Plus, Trash2, Power, PowerOff, Calendar, Globe, Settings as SettingsIcon } from 'lucide-react';
 import axios from 'axios';
 
@@ -19,11 +19,7 @@ const ScheduleManager = ({ userId = 'demo_user' }) => {
     }
   });
 
-  useEffect(() => {
-    fetchSchedules();
-  }, []);
-
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_BASE}/schedules?user_id=${userId}`);
@@ -33,23 +29,32 @@ const ScheduleManager = ({ userId = 'demo_user' }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    fetchSchedules();
+    const interval = setInterval(fetchSchedules, 30000);
+    return () => clearInterval(interval);
+  }, [fetchSchedules]);
 
   const createSchedule = async () => {
     try {
-      await axios.post(`${API_BASE}/schedules?user_id=${userId}`, newSchedule);
-      setShowAddModal(false);
-      setNewSchedule({
-        schedule_time: '09:00',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-        config: {
-          language: 'english',
-          upload_to_youtube: true,
-          trending_region: 'US',
-          script_tone: 'energetic'
-        }
-      });
-      fetchSchedules();
+      const response = await axios.post(`${API_BASE}/schedules?user_id=${userId}`, newSchedule);
+      if (response.data.success) {
+        setShowAddModal(false);
+        setNewSchedule({
+          schedule_time: '09:00',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+          config: {
+            language: 'english',
+            upload_to_youtube: true,
+            trending_region: 'US',
+            script_tone: 'energetic'
+          }
+        });
+        await fetchSchedules();
+        alert('Schedule created successfully!');
+      }
     } catch (error) {
       console.error('Error creating schedule:', error);
       alert('Failed to create schedule: ' + (error.response?.data?.detail || error.message));
@@ -57,24 +62,27 @@ const ScheduleManager = ({ userId = 'demo_user' }) => {
   };
 
   const deleteSchedule = async (scheduleId) => {
-    if (!window.confirm('Are you sure you want to delete this schedule?')) return;
+    if (!window.confirm('Are you sure you want to delete this schedule? This action cannot be undone.')) return;
     
     try {
       await axios.delete(`${API_BASE}/schedules/${scheduleId}`);
-      fetchSchedules();
+      await fetchSchedules();
+      alert('Schedule deleted successfully');
     } catch (error) {
       console.error('Error deleting schedule:', error);
-      alert('Failed to delete schedule');
+      alert('Failed to delete schedule: ' + (error.response?.data?.detail || error.message));
     }
   };
 
   const toggleSchedule = async (scheduleId, currentlyActive) => {
     try {
       await axios.post(`${API_BASE}/schedules/${scheduleId}/toggle?active=${!currentlyActive}`);
-      fetchSchedules();
+      await fetchSchedules();
+      const action = currentlyActive ? 'disabled' : 'enabled';
+      alert(`Schedule ${action} successfully`);
     } catch (error) {
       console.error('Error toggling schedule:', error);
-      alert('Failed to toggle schedule');
+      alert('Failed to toggle schedule: ' + (error.response?.data?.detail || error.message));
     }
   };
 

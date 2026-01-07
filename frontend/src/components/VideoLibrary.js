@@ -11,6 +11,8 @@ import {
   Search
 } from 'lucide-react';
 
+const API_BASE = process.env.REACT_APP_API_URL || '';
+
 const VideoLibrary = () => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,11 +26,13 @@ const VideoLibrary = () => {
 
   const fetchVideos = async () => {
     try {
-      const response = await fetch('/api/videos');
+      const response = await fetch(`${API_BASE}/api/videos`);
+      if (!response.ok) throw new Error('Failed to fetch videos');
       const data = await response.json();
-      setVideos(data.videos);
+      setVideos(data.videos || []);
     } catch (error) {
       console.error('Error fetching videos:', error);
+      alert('Failed to fetch videos: ' + error.message);
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Flame, Clock, BarChart3, RefreshCw } from 'lucide-react';
 
+const API_BASE = process.env.REACT_APP_API_URL || '';
+
 const TrendingTopics = () => {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -14,12 +16,14 @@ const TrendingTopics = () => {
   const fetchTrends = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/trends');
+      const response = await fetch(`${API_BASE}/api/trends`);
+      if (!response.ok) throw new Error('Failed to fetch trends');
       const data = await response.json();
-      setTopics(data.topics);
+      setTopics(data.topics || []);
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Error fetching trends:', error);
+      alert('Failed to fetch trends: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -27,7 +31,7 @@ const TrendingTopics = () => {
 
   const generateFromTopic = async (topic) => {
     try {
-      await fetch('/api/automation/trigger', {
+      const response = await fetch(`${API_BASE}/api/automation/trigger`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,10 +44,11 @@ const TrendingTopics = () => {
           }
         })
       });
+      if (!response.ok) throw new Error('Automation failed to start');
       alert('Automation started with selected topic!');
     } catch (error) {
       console.error('Error starting automation:', error);
-      alert('Failed to start automation');
+      alert('Failed to start automation: ' + error.message);
     }
   };
 
