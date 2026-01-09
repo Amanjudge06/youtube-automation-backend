@@ -263,17 +263,34 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
             {/* Progress Steps Indicator - Based on actual backend steps */}
             <div className="grid grid-cols-6 gap-1 mt-2">
               {[
-                { name: 'Trending', range: [0, 16] },
-                { name: 'Research', range: [17, 33] },
-                { name: 'Script', range: [34, 55] },
-                { name: 'Voice', range: [56, 70] },
-                { name: 'Images', range: [71, 85] },
-                { name: 'Video', range: [86, 100] }
+                { name: 'Trending', range: [0, 16] },     // 10-16%: Step 1/6
+                { name: 'Research', range: [17, 33] },    // 25-33%: Step 2/6
+                { name: 'Script', range: [34, 50] },      // 40-50%: Step 3/6
+                { name: 'Voice', range: [51, 69] },       // 55-65%: Step 4/6
+                { name: 'Images', range: [70, 79] },      // 70-80%: Step 5/6
+                { name: 'Video', range: [80, 100] }       // 85-100%: Step 6/6
               ].map((step, idx) => {
                 const progress = status.progress || 0;
                 const activeStep = getActiveStep(status.current_step);
                 const isComplete = progress > step.range[1];
                 const isCurrent = activeStep === idx || (progress >= step.range[0] && progress <= step.range[1]);
+                
+                // Debug logging (remove in production)
+                if (idx === 0 && status.running) {
+                  console.log('Progress Debug:', {
+                    current_step: status.current_step,
+                    progress: progress,
+                    activeStep: activeStep,
+                    stepRanges: [
+                      { name: 'Trending', range: [0, 16] },
+                      { name: 'Research', range: [17, 33] },
+                      { name: 'Script', range: [34, 50] },
+                      { name: 'Voice', range: [51, 69] },
+                      { name: 'Images', range: [70, 79] },
+                      { name: 'Video', range: [80, 100] }
+                    ]
+                  });
+                }
                 
                 return (
                   <div key={step.name} className="text-center">
