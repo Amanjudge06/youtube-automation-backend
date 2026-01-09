@@ -19,7 +19,7 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
   const [config, setConfig] = useState({
     language: 'english',
     upload_to_youtube: false,
-    trending_region: 'AU',
+    trending_region: 'US',
     script_tone: 'energetic',
     custom_topic: ''
   });
@@ -89,77 +89,116 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Snip-Z Dashboard</h1>
-          <p className="text-gray-600">Monitor and control your YouTube automation</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Snip-Z Dashboard</h1>
+          <p className="text-sm md:text-base text-gray-600">AI-powered YouTube Shorts automation</p>
         </div>
       </div>
 
       {/* Custom Topic Section */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 border border-purple-200">
-        <div className="flex items-center space-x-2 mb-4">
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 md:p-6 border border-purple-200 shadow-sm">
+        <div className="flex items-center space-x-2 mb-3 md:mb-4">
           <Target className="w-5 h-5 text-purple-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Create Video on Custom Topic</h2>
+          <h2 className="text-base md:text-lg font-semibold text-gray-900">Create Custom Video</h2>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-3">
           <input
             type="text"
             value={config.custom_topic}
             onChange={(e) => setConfig({...config, custom_topic: e.target.value})}
-            placeholder="Enter your custom topic (e.g., 'History of Pizza', 'Space Exploration')..."
-            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="Enter topic (e.g., 'History of Pizza')..."
+            className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           />
           <button
             onClick={() => onTriggerAutomation({...config, custom_topic: config.custom_topic})}
             disabled={status.running || !config.custom_topic.trim()}
-            className="flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full md:w-auto flex items-center justify-center px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow-md"
           >
             <Play className="w-4 h-4 mr-2" />
             Generate Video
           </button>
         </div>
-        <p className="text-xs text-gray-600 mt-2">Or use trending topics below for automated content</p>
+        <p className="text-xs text-gray-600 mt-2">Or use auto-generation from trending topics below</p>
       </div>
 
       {/* Quick Start with Trending Topics */}
-      <div className="bg-white rounded-lg p-6 border border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Auto-Generate from Trends</h2>
+      <div className="bg-white rounded-xl p-4 md:p-6 border border-gray-200 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 space-y-3 md:space-y-0">
+          <h2 className="text-base md:text-lg font-semibold text-gray-900">Auto-Generate from Trends</h2>
         </div>
         
         {/* Advanced Controls */}
-        <div className="flex items-center space-x-4">
-          <select
-            value={config.language}
-            onChange={(e) => setConfig({...config, language: e.target.value})}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="english">English</option>
-            <option value="hinglish">Hinglish</option>
-          </select>
-          
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={config.upload_to_youtube}
-              onChange={(e) => setConfig({...config, upload_to_youtube: e.target.checked})}
-              className="rounded"
-            />
-            <span className="text-sm">Auto Upload</span>
-          </label>
-          
-          <button
-            onClick={() => onTriggerAutomation({...config, custom_topic: ''})}
-            disabled={status.running}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Auto from Trends
-          </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700 block">Language</label>
+            <select
+              value={config.language}
+              onChange={(e) => setConfig({...config, language: e.target.value})}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="english">English</option>
+              <option value="hinglish">Hinglish</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700 block">Trending Region</label>
+            <select
+              value={config.trending_region}
+              onChange={(e) => setConfig({...config, trending_region: e.target.value})}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="US">United States</option>
+              <option value="AU">Australia</option>
+              <option value="GB">United Kingdom</option>
+              <option value="CA">Canada</option>
+              <option value="IN">India</option>
+              <option value="JP">Japan</option>
+              <option value="DE">Germany</option>
+              <option value="FR">France</option>
+              <option value="BR">Brazil</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700 block">Tone</label>
+            <select
+              value={config.script_tone}
+              onChange={(e) => setConfig({...config, script_tone: e.target.value})}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="energetic">Energetic</option>
+              <option value="professional">Professional</option>
+              <option value="casual">Casual</option>
+              <option value="dramatic">Dramatic</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-700 block">Upload</label>
+            <label className="flex items-center h-[38px] px-3 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={config.upload_to_youtube}
+                onChange={(e) => setConfig({...config, upload_to_youtube: e.target.checked})}
+                className="rounded text-blue-600 focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-sm ml-2">Auto Upload</span>
+            </label>
+          </div>
         </div>
+
+        <button
+          onClick={() => onTriggerAutomation({...config, custom_topic: ''})}
+          disabled={status.running}
+          className="w-full md:w-auto flex items-center justify-center mt-4 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+        >
+          <TrendingUp className="w-4 h-4 mr-2" />
+          Start Auto-Generation
+        </button>
       </div>
 
       {/* Status Bar */}
