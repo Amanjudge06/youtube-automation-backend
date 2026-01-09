@@ -58,7 +58,14 @@ function App() {
     const fetchStatus = async () => {
       try {
         const response = await axios.get(`${API_BASE}/status`);
-        setStatus(response.data);
+        const data = response.data;
+        
+        // Keep progress at 100% if automation just completed
+        if (!data.running && data.progress === 0 && status.running) {
+          setStatus(prev => ({ ...prev, running: false }));
+        } else {
+          setStatus(data);
+        }
       } catch (error) {
         console.error('Error fetching status:', error);
       }
@@ -68,7 +75,7 @@ function App() {
     const interval = setInterval(fetchStatus, 1000); // Poll every 1 second for smoother progress
     
     return () => clearInterval(interval);
-  }, [session]);
+  }, [session, status.running]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
