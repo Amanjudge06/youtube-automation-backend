@@ -16,6 +16,20 @@ import {
 const API_BASE = process.env.REACT_APP_API_URL || '';
 
 const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
+  // Helper to determine which step is active based on current_step text
+  const getActiveStep = (currentStepText) => {
+    if (!currentStepText) return -1;
+    const text = currentStepText.toLowerCase();
+    if (text.includes('trending') || (text.includes('topic') && text.includes('fetch'))) return 0;
+    if (text.includes('research')) return 1;
+    if (text.includes('script') || text.includes('generating script')) return 2;
+    if (text.includes('voiceover') || text.includes('voice') || text.includes('subtitle')) return 3;
+    if (text.includes('image') || text.includes('collecting')) return 4;
+    if (text.includes('video') || text.includes('assembling') || text.includes('upload')) return 5;
+    if (text.includes('completed') || text.includes('success')) return 6;
+    return -1;
+  };
+
   const [config, setConfig] = useState({
     language: 'english',
     upload_to_youtube: false,
@@ -246,20 +260,29 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
               </div>
             </div>
             
-            {/* Progress Steps Indicator */}
+            {/* Progress Steps Indicator - Based on actual backend steps */}
             <div className="grid grid-cols-6 gap-1 mt-2">
-              {['Trending', 'Research', 'Script', 'Voice', 'Images', 'Video'].map((step, idx) => {
-                const stepProgress = ((idx + 1) / 6) * 100;
-                const isComplete = (status.progress || 0) >= stepProgress;
-                const isCurrent = (status.progress || 0) >= stepProgress - 16 && (status.progress || 0) < stepProgress;
+              {[
+                { name: 'Trending', range: [0, 16] },
+                { name: 'Research', range: [17, 33] },
+                { name: 'Script', range: [34, 55] },
+                { name: 'Voice', range: [56, 70] },
+                { name: 'Images', range: [71, 85] },
+                { name: 'Video', range: [86, 100] }
+              ].map((step, idx) => {
+                const progress = status.progress || 0;
+                const activeStep = getActiveStep(status.current_step);
+                const isComplete = progress > step.range[1];
+                const isCurrent = activeStep === idx || (progress >= step.range[0] && progress <= step.range[1]);
+                
                 return (
-                  <div key={step} className="text-center">
+                  <div key={step.name} className="text-center">
                     <div className={`h-1.5 rounded-full transition-all duration-500 ${
                       isComplete ? 'bg-green-500' : isCurrent ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'
                     }`}></div>
                     <p className={`text-xs mt-1 transition-colors ${
                       isComplete ? 'text-green-600 font-medium' : isCurrent ? 'text-blue-600 font-medium' : 'text-gray-400'
-                    }`}>{step}</p>
+                    }`}>{step.name}</p>
                   </div>
                 );
               })}
