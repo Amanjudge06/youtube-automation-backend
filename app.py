@@ -924,6 +924,8 @@ async def youtube_auth_callback(auth_data: Dict):
         
         if not user_id or user_id == "demo_user":
              raise HTTPException(status_code=400, detail="Invalid user session")
+
+        if not auth_code:
             raise HTTPException(status_code=400, detail="Authorization code is required")
         
         upload_service = YouTubeUploadService()
