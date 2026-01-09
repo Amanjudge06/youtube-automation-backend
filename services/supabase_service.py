@@ -102,6 +102,72 @@ class SupabaseService:
             logger.error(f"Error saving video metadata: {e}")
             return {"error": str(e)}
 
+    # Automation Status Methods
+    def get_automation_status(self, user_id: str = "demo_user") -> Dict[str, Any]:
+        """Get current automation status from Supabase"""
+        if not self.is_available():
+            return {
+                "running": False,
+                "current_step": "",
+                "progress": 0,
+                "logs": [],
+                "error": None,
+                "video_path": None,
+                "youtube_url": None,
+                "last_run": None
+            }
+        try:
+            response = self.client.table('automation_status').select('*').eq('user_id', user_id).single().execute()
+            if response.data:
+                data = response.data
+                return {
+                    "running": data.get("running", False),
+                    "current_step": data.get("current_step", ""),
+                    "progress": data.get("progress", 0),
+                    "logs": data.get("logs", []),
+                    "error": data.get("error"),
+                    "video_path": data.get("video_path"),
+                    "youtube_url": data.get("youtube_url"),
+                    "last_run": data.get("last_run")
+                }
+        except Exception as e:
+            logger.error(f"Error getting automation status: {e}")
+        
+        # Return default status if error or not found
+        return {
+            "running": False,
+            "current_step": "",
+            "progress": 0,
+            "logs": [],
+            "error": None,
+            "video_path": None,
+            "youtube_url": None,
+            "last_run": None
+        }
+    
+    def update_automation_status(self, user_id: str, status: Dict[str, Any]) -> bool:
+        """Update automation status in Supabase"""
+        if not self.is_available():
+            return False
+        try:
+            # Upsert the status
+            self.client.table('automation_status').upsert({
+                "user_id": user_id,
+                "running": status.get("running", False),
+                "current_step": status.get("current_step", ""),
+                "progress": status.get("progress", 0),
+                "logs": status.get("logs", []),
+                "error": status.get("error"),
+                "video_path": status.get("video_path"),
+                "youtube_url": status.get("youtube_url"),
+                "last_run": status.get("last_run"),
+                "updated_at": "now()"
+            }, on_conflict="user_id").execute()
+            return True
+        except Exception as e:
+            logger.error(f"Error updating automation status: {e}")
+            return False
+
     # Storage Methods
     def upload_file(self, bucket: str, path: str, file_path: Path) -> str:
         if not self.is_available():

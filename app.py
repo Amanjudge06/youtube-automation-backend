@@ -948,26 +948,24 @@ async def get_current_voice():
 
 @app.get("/api/status")
 async def get_status():
-    """Get current automation status"""
-    # Keep completed status visible for 60 seconds after completion
-    if not automation_status["running"] and automation_status.get("last_run"):
-        try:
-            from datetime import datetime, timedelta
-            last_run = datetime.fromisoformat(automation_status["last_run"])
-            time_since_completion = datetime.now() - last_run
-            
-            # Clear status after 60 seconds
-            if time_since_completion > timedelta(seconds=60):
-                automation_status["current_step"] = ""
-                automation_status["progress"] = 0
-                automation_status["logs"] = []
-                automation_status["video_path"] = None
-                automation_status["youtube_url"] = None
-                automation_status["last_run"] = None
-        except:
-            pass
-    
-    return automation_status
+    """Get current automation status from Supabase"""
+    try:
+        # Get status from Supabase
+        status = supabase_service.get_automation_status("demo_user")
+        return status
+    except Exception as e:
+        logger.error(f"Error getting status: {e}")
+        # Return default status on error
+        return {
+            "running": False,
+            "current_step": "",
+            "progress": 0,
+            "logs": [],
+            "error": None,
+            "video_path": None,
+            "youtube_url": None,
+            "last_run": None
+        }
 
 @app.get("/api/diagnostics")
 async def get_diagnostics():
@@ -1219,9 +1217,22 @@ async def update_config(config_update: Dict):
 # Background task for automation
 async def run_automation_async(language: str = "english", upload_to_youtube: bool = False, user_id: str = None, custom_topic: str = None):
     """Run automation in the background and update status"""
+    if not user_id:
+        user_id = "demo_user"
+    
     try:
+        # Clear previous status when starting new automation
+        automation_status["running"] = True
         automation_status["current_step"] = "Starting automation..."
         automation_status["progress"] = 10
+        automation_status["logs"] = []
+        automation_status["error"] = None
+        automation_status["video_path"] = None
+        automation_status["youtube_url"] = None
+        automation_status["last_run"] = None
+        
+        # Sync to Supabase
+        supabase_service.update_automation_status(user_id, automation_status)
         
         # Run the actual automation with web-safe error handling
         try:
@@ -1270,6 +1281,9 @@ async def run_automation_async(language: str = "english", upload_to_youtube: boo
                 if video_path:
                     automation_status["logs"].append(f"✅ Video saved: {Path(video_path).name}")
                     automation_status["video_path"] = str(video_path)
+                
+                # Sync final status to Supabase
+                supabase_service.update_automation_status(user_id, automation_status)
             else:
                 raise Exception("Video creation failed - no output file generated")
                 
@@ -1283,6 +1297,9 @@ async def run_automation_async(language: str = "english", upload_to_youtube: boo
         automation_status["current_step"] = f"Failed: {str(e)}"
         automation_status["error"] = str(e)
         automation_status["logs"].append(f"Error: {str(e)}")
+        
+        # Sync error status to Supabase
+        supabase_service.update_automation_status(user_id, automation_status)
 
 
 def run_automation_web_safe(language: str = "english", upload_to_youtube: bool = True, custom_topic: str = None):
