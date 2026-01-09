@@ -130,10 +130,10 @@ BEGIN
         WHERE table_name='automation_status' 
         AND column_name='user_id' 
         AND data_type IN ('text', 'character varying')
-
+    ) THEN
         -- Drop default constraint on user_id if it exists to allow type change
         ALTER TABLE automation_status ALTER COLUMN user_id DROP DEFAULT;
-    ) THEN
+
         -- Drop foreign key constraint if it exists
         ALTER TABLE automation_status DROP CONSTRAINT IF EXISTS automation_status_user_id_fkey;
         
