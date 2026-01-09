@@ -884,14 +884,18 @@ async def set_voice(voice_data: Dict):
         raise HTTPException(status_code=500, detail=f"Failed to set voice: {e}")
 
 @app.get("/youtube/auth/start")
-async def start_youtube_auth(user_id: str = "demo_user"):
-    """Start YouTube OAuth flow for a specific user"""
+async def start_youtube_auth(user_id: str = Depends(require_auth)):
+    """Start YouTube OAuth flow for the authenticated user"""
     try:
         from services.youtube_upload_service import YouTubeUploadService
         from services.user_manager import user_manager
         
-        # Create user if doesn't exist
-        user_manager.create_user(user_id)
+        # Ensure user exists in our system
+        try:
+            user_manager.get_user(user_id)
+        except:
+            # Create user if doesn't exist (using UUID from auth)
+            user_manager.create_user(user_id)
         
         upload_service = YouTubeUploadService()
         
@@ -916,9 +920,10 @@ async def youtube_auth_callback(auth_data: Dict):
         from services.user_manager import user_manager
         
         auth_code = auth_data.get("auth_code")
-        user_id = auth_data.get("user_id", "demo_user")
+        user_id = auth_data.get("user_id")
         
-        if not auth_code:
+        if not user_id or user_id == "demo_user":
+             raise HTTPException(status_code=400, detail="Invalid user session")
             raise HTTPException(status_code=400, detail="Authorization code is required")
         
         upload_service = YouTubeUploadService()
@@ -943,8 +948,10 @@ async def youtube_auth_callback(auth_data: Dict):
         raise HTTPException(status_code=500, detail=f"Authentication failed: {e}")
 
 @app.get("/youtube/channels/{user_id}")
-async def get_user_youtube_channels(user_id: str = "demo_user"):
+async def get_user_youtube_channels(user_id: str):
     """Get YouTube channels for a specific user"""
+    if user_id == "demo_user":
+        return []
     try:
         from services.user_manager import user_manager
         
@@ -999,9 +1006,9 @@ async def set_active_channel(user_id: str, channel_data: Dict):
         raise HTTPException(status_code=500, detail=f"Failed to set active channel: {e}")
 
 @app.get("/youtube/channels")
-async def get_youtube_channels_legacy():
-    """Legacy endpoint - redirects to demo user"""
-    return await get_user_youtube_channels("demo_user")
+async def get_current_user_channels(user_id: str = Depends(require_auth)):
+    """Get YouTube channels for the authenticated user"""
+    return await get_user_youtube_channels(user_id)
 async def get_youtube_channels():
     """Get available YouTube channels for the authenticated user"""
     try:
@@ -1382,7 +1389,8 @@ async def update_config(config_update: Dict):
 async def run_automation_async(language: str = "english", upload_to_youtube: bool = False, user_id: str = None, custom_topic: str = None):
     """Run automation in the background and update status"""
     if not user_id:
-        user_id = "demo_user"
+        logger.error("Attempted to run automation without user_id")
+        return
     
     try:
         # Clear previous status when starting new automation

@@ -46,7 +46,7 @@ def get_current_user(
         )
         
         # Extract user ID from 'sub' claim
-        user_id: str = payload.get("sub")
+        user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(
                 status_code=401,
@@ -106,9 +106,15 @@ DEMO_USER_ID = "demo_user"
 
 def get_user_or_demo(user_id: Optional[str] = Depends(get_optional_user)) -> str:
     """
-    Temporary helper for gradual migration to full authentication.
-    Returns authenticated user ID or falls back to demo_user.
+    Supabase Auth Enforcement
     
-    TODO: Remove this once all clients are using authentication
+    This function replaces the old demo fallback behavior.
+    Since migrating to UUIDs in the database, 'demo_user' string is no longer valid.
+    We must enforce real authentication or raise 401.
     """
-    return user_id if user_id else DEMO_USER_ID
+    if not user_id:
+        raise HTTPException(
+            status_code=401, 
+            detail="Authentication required. Please log in."
+        )
+    return user_id

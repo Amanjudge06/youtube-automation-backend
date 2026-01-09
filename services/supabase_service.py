@@ -234,8 +234,21 @@ class SupabaseService:
             return False
 
     # Automation Status Methods
-    def get_automation_status(self, user_id: str = "demo_user") -> Dict[str, Any]:
+    def get_automation_status(self, user_id: str) -> Dict[str, Any]:
         """Get current automation status from Supabase"""
+        # Safety check for legacy demo_user to prevent DB crashes
+        if user_id == "demo_user":
+            return {
+                "running": False,
+                "current_step": "Demo Mode (Legacy)",
+                "progress": 0,
+                "logs": [],
+                "error": "Please log in to use automation",
+                "video_path": None,
+                "youtube_url": None,
+                "last_run": None
+            }
+            
         if not self.is_available():
             return {
                 "running": False,
