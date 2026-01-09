@@ -44,9 +44,32 @@ CREATE TABLE IF NOT EXISTS schedules (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Add missing columns if table already exists
+-- Migrate existing schedules table if needed
 DO $$ 
 BEGIN
+    -- Check if user_id is TEXT and convert to UUID
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name='schedules' 
+        AND column_name='user_id' 
+        AND data_type='text'
+    ) THEN
+        -- Drop foreign key constraint if it exists
+        ALTER TABLE schedules DROP CONSTRAINT IF EXISTS schedules_user_id_fkey;
+        
+        -- Convert TEXT user_id to UUID
+        -- For existing demo_user rows, we'll delete them or convert to a test UUID
+        DELETE FROM schedules WHERE user_id = 'demo_user';
+        
+        -- Change column type to UUID
+        ALTER TABLE schedules ALTER COLUMN user_id TYPE UUID USING user_id::uuid;
+        
+        -- Add foreign key constraint
+        ALTER TABLE schedules ADD CONSTRAINT schedules_user_id_fkey 
+            FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+    
+    -- Add missing columns if table already exists
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                    WHERE table_name='schedules' AND column_name='is_active') THEN
         ALTER TABLE schedules ADD COLUMN is_active BOOLEAN DEFAULT true;
