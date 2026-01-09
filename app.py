@@ -949,6 +949,24 @@ async def get_current_voice():
 @app.get("/api/status")
 async def get_status():
     """Get current automation status"""
+    # Keep completed status visible for 60 seconds after completion
+    if not automation_status["running"] and automation_status.get("last_run"):
+        try:
+            from datetime import datetime, timedelta
+            last_run = datetime.fromisoformat(automation_status["last_run"])
+            time_since_completion = datetime.now() - last_run
+            
+            # Clear status after 60 seconds
+            if time_since_completion > timedelta(seconds=60):
+                automation_status["current_step"] = ""
+                automation_status["progress"] = 0
+                automation_status["logs"] = []
+                automation_status["video_path"] = None
+                automation_status["youtube_url"] = None
+                automation_status["last_run"] = None
+        except:
+            pass
+    
     return automation_status
 
 @app.get("/api/diagnostics")
