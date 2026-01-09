@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
     UNIQUE(user_id)
 );
 
-CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
 
 -- ========================================
 -- 2. SCHEDULES TABLE (with user isolation)
@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS schedules (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_schedules_user_id ON schedules(user_id);
-CREATE INDEX idx_schedules_active ON schedules(is_active, user_id);
+CREATE INDEX IF NOT EXISTS idx_schedules_user_id ON schedules(user_id);
+CREATE INDEX IF NOT EXISTS idx_schedules_active ON schedules(is_active, user_id);
 
 -- ========================================
 -- 3. AUTOMATION STATUS TABLE
@@ -75,8 +75,8 @@ CREATE TABLE IF NOT EXISTS automation_status (
     UNIQUE(user_id)
 );
 
-CREATE INDEX idx_automation_status_user_id ON automation_status(user_id);
-CREATE INDEX idx_automation_status_running ON automation_status(running, user_id);
+CREATE INDEX IF NOT EXISTS idx_automation_status_user_id ON automation_status(user_id);
+CREATE INDEX IF NOT EXISTS idx_automation_status_running ON automation_status(running, user_id);
 
 -- ========================================
 -- 4. VIDEO HISTORY TABLE
@@ -117,9 +117,9 @@ CREATE TABLE IF NOT EXISTS video_history (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_video_history_user_id ON video_history(user_id);
-CREATE INDEX idx_video_history_created_at ON video_history(created_at DESC);
-CREATE INDEX idx_video_history_youtube_id ON video_history(youtube_video_id);
+CREATE INDEX IF NOT EXISTS idx_video_history_user_id ON video_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_video_history_created_at ON video_history(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_video_history_youtube_id ON video_history(youtube_video_id);
 
 -- ========================================
 -- 5. USER USAGE TRACKING
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS user_usage (
     UNIQUE(user_id)
 );
 
-CREATE INDEX idx_user_usage_user_id ON user_usage(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_usage_user_id ON user_usage(user_id);
 
 -- ========================================
 -- 6. USER PROFILES (extended user info)
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     UNIQUE(user_id)
 );
 
-CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON user_profiles(user_id);
 
 -- ========================================
 -- 7. ROW LEVEL SECURITY (RLS) POLICIES
