@@ -1,38 +1,115 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import Login from './components/Login';
-import Signup from './components/Signup';
-import MainApp from './components/MainApp';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
+import Dashboard from './Dashboard';
+import VideoLibrary from './VideoLibrary';
+import TrendingTopics from './TrendingTopics';
+import SettingsNew from './SettingsNew';
+import Logs from './Logs';
+import Optimization from './Optimization';
+import ScheduleManager from './ScheduleManager';
+import { 
+  Home, 
+  Video, 
+  TrendingUp, 
+  Settings as SettingsIcon, 
+  FileText,
+  Play,
+  Square,
+  Youtube,
+  Brain,
+  LogOut,
+  Calendar,
+  User
+} from 'lucide-react';
 
-function App() {
-  return (
-    <Router>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route 
-            path="/*" 
-            element={
-              <ProtectedRoute>
-                <MainApp />
-              </ProtectedRoute>
-            } 
-          />
-        </Routes>
-      </AuthProvider>
-    </Router>
-  );
-}
+const API_BASE = '/api';
 
-export default App;
-        user_id: session?.user?.id
+// Configure axios to include auth token
+axios.interceptors.request.use((config) => {
+  const session = JSON.parse(localStorage.getItem('supabase.auth.token') || '{}');
+  if (session?.currentSession?.access_token) {
+    config.headers.Authorization = `Bearer ${session.currentSession.access_token}`;
+  }
+  return config;
+});
+
+function MainApp() {
+  const { user, signOut, session } = useAuth();
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [status, setStatus] = useState({
+    running: false,
+    current_step: '',
+    progress: 0,
+    logs: [],
+    last_run: null,
+    error: null
+  });
+  const [userInfo, setUserInfo] = useState(null);
+
+  // Fetch user info
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      if (!session?.access_token) return;
+      
+      try {
+        const response = await axios.get(`${API_BASE}/auth/me`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+        setUserInfo(response.data);
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+      }
+    };
+
+    fetchUserInfo();
+  }, [session]);
+
+  // Fetch status periodically with auth token
+  useEffect(() => {
+    if (!session?.access_token) return;
+
+    const fetchStatus = async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/status`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+        const data = response.data;
+        
+        // Keep progress at 100% if automation just completed
+        if (!data.running && data.progress === 0 && status.running) {
+          setStatus(prev => ({ ...prev, running: false }));
+        } else {
+          setStatus(data);
+        }
+      } catch (error) {
+        console.error('Error fetching status:', error);
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 1000);
+    
+    return () => clearInterval(interval);
+  }, [session, status.running]);
+
+  const triggerAutomation = async (config = {}) => {
+    try {
+      setStatus(prev => ({ ...prev, running: true, current_step: 'Starting...' }));
+      
+      await axios.post(`${API_BASE}/automation/trigger`, {
+        config: {
+          language: 'english',
+          trending_region: 'AU',
+          script_tone: 'energetic',
+          upload_to_youtube: false,
+          ...config
+        }
+      }, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
       });
     } catch (error) {
       console.error('Error triggering automation:', error);
-      // Revert running state on error
       setStatus(prev => ({ ...prev, running: false, current_step: 'Failed' }));
       
       const errorMessage = error.response?.data?.detail || error.message || "Unknown error";
@@ -42,7 +119,9 @@ export default App;
 
   const stopAutomation = async () => {
     try {
-      await axios.get(`${API_BASE}/automation/stop`);
+      await axios.get(`${API_BASE}/automation/stop`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
     } catch (error) {
       console.error('Error stopping automation:', error);
     }
@@ -72,8 +151,18 @@ export default App;
               </div>
             </div>
             
-            {/* Status Indicator */}
+            {/* Status Indicator & User Menu */}
             <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Usage Info */}
+              {userInfo && (
+                <div className="hidden lg:flex items-center space-x-2 px-3 py-1.5 bg-purple-50 rounded-lg">
+                  <span className="text-xs font-medium text-purple-700">
+                    {userInfo.usage?.daily_remaining || 0} videos left today
+                  </span>
+                </div>
+              )}
+              
+              {/* Status */}
               <div className="hidden md:flex items-center space-x-2">
                 <div className={`w-2.5 h-2.5 rounded-full ${status.running ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
                 <span className="text-sm text-gray-600">
@@ -81,14 +170,27 @@ export default App;
                 </span>
               </div>
 
-              <button
-                onClick={handleSignOut}
-                className="p-2 text-gray-500 hover:text-red-600 transition-colors rounded-lg hover:bg-gray-100"
-                title="Sign Out"
-              >
-                <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-              
+              {/* User Menu */}
+              <div className="relative group">
+                <button className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-100 rounded-lg transition">
+                  <User className="w-5 h-5 text-gray-600" />
+                  <span className="hidden sm:inline text-sm text-gray-700">{user?.email}</span>
+                </button>
+                
+                {/* Dropdown */}
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="p-2">
+                    <button
+                      onClick={signOut}
+                      className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Quick Actions - Desktop Only */}
               <div className="hidden lg:flex space-x-2">
                 <button
@@ -149,11 +251,11 @@ export default App;
                 onStopAutomation={stopAutomation}
               />
             )}
-            {activeTab === 'schedules' && <ScheduleManager userId={session?.user?.id} />}
+            {activeTab === 'schedules' && <ScheduleManager userId={user?.id} />}
             {activeTab === 'videos' && <VideoLibrary />}
             {activeTab === 'trending' && <TrendingTopics />}
             {activeTab === 'optimization' && <Optimization />}
-            {activeTab === 'settings' && <SettingsNew userId={session?.user?.id} />}
+            {activeTab === 'settings' && <SettingsNew userId={user?.id} />}
             {activeTab === 'logs' && <Logs />}
           </main>
         </div>
@@ -162,4 +264,4 @@ export default App;
   );
 }
 
-export default App;
+export default MainApp;

@@ -1,9 +1,9 @@
 """
 YouTube Shorts Automation - Web Application
-FastAPI backend for the automation system
+FastAPI backend for the automation system with full authentication
 """
 
-from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Response
+from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
@@ -28,6 +28,7 @@ from services.content_optimization_service import ContentOptimizationService
 from services.supabase_service import SupabaseService
 from services.scheduler_service import get_scheduler
 from utils.helpers import setup_logging, get_video_metadata
+from auth import get_current_user, require_auth, get_user_or_demo
 
 # Setup logging
 setup_logging()
@@ -169,6 +170,159 @@ async def shutdown_event():
         logger.info("✅ Scheduler service stopped")
     except Exception as e:
         logger.error(f"Error stopping scheduler: {e}")
+
+# ========================================
+# AUTHENTICATION & USER MANAGEMENT ENDPOINTS
+# ========================================
+
+class SignUpRequest(BaseModel):
+    email: str
+    password: str
+    full_name: Optional[str] = None
+
+class SignInRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/api/auth/signup")
+async def signup(request: SignUpRequest):
+    """Register a new user"""
+    try:
+        result = supabase_service.sign_up(request.email, request.password)
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        # Update profile with full name if provided
+        if request.full_name and result.get("user"):
+            user_id = result["user"]["id"]
+            supabase_service.update_user_profile(user_id, {"full_name": request.full_name})
+        
+        return {
+            "message": "User created successfully. Please check your email to verify your account.",
+            "user": result.get("user")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Signup error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create user")
+
+@app.post("/api/auth/signin")
+async def signin(request: SignInRequest):
+    """Sign in existing user"""
+    try:
+        result = supabase_service.sign_in(request.email, request.password)
+        if "error" in result:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        return {
+            "message": "Signed in successfully",
+            "session": result.get("session"),
+            "user": result.get("user")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Signin error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to sign in")
+
+@app.post("/api/auth/signout")
+async def signout(user_id: str = Depends(require_auth)):
+    """Sign out current user"""
+    try:
+        result = supabase_service.sign_out()
+        return {"message": "Signed out successfully"}
+    except Exception as e:
+        logger.error(f"Signout error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to sign out")
+
+@app.get("/api/auth/me")
+async def get_current_user_info(user_id: str = Depends(require_auth)):
+    """Get current authenticated user information"""
+    try:
+        profile = supabase_service.get_user_profile(user_id)
+        usage = supabase_service.get_user_usage(user_id)
+        settings = supabase_service.get_user_settings(user_id)
+        
+        return {
+            "user_id": user_id,
+            "profile": profile,
+            "usage": usage,
+            "has_api_keys": bool(settings.get("google_api_key") or settings.get("openai_api_key"))
+        }
+    except Exception as e:
+        logger.error(f"Error fetching user info: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch user information")
+
+# ========================================
+# USER SETTINGS ENDPOINTS
+# ========================================
+
+class UserSettingsUpdate(BaseModel):
+    google_api_key: Optional[str] = None
+    pexels_api_key: Optional[str] = None
+    pixabay_api_key: Optional[str] = None
+    elevenlabs_api_key: Optional[str] = None
+    default_voice_id: Optional[str] = None
+    default_trending_region: Optional[str] = None
+
+@app.get("/api/user/settings")
+async def get_user_settings(user_id: str = Depends(require_auth)):
+    """Get user settings and API keys"""
+    try:
+        settings = supabase_service.get_user_settings(user_id)
+        # Don't send full API keys to frontend (send masked version)
+        if settings:
+            for key in ["google_api_key", "pexels_api_key", "pixabay_api_key", "elevenlabs_api_key"]:
+                if settings.get(key):
+                    # Mask API key (show last 4 chars only)
+                    settings[key] = "..." + settings[key][-4:]
+        return settings
+    except Exception as e:
+        logger.error(f"Error fetching user settings: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch settings")
+
+@app.put("/api/user/settings")
+async def update_user_settings(
+    settings: UserSettingsUpdate,
+    user_id: str = Depends(require_auth)
+):
+    """Update user settings and API keys"""
+    try:
+        # Filter out None values
+        update_data = {k: v for k, v in settings.dict().items() if v is not None}
+        
+        success = supabase_service.update_user_settings(user_id, update_data)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update settings")
+        
+        return {"message": "Settings updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating user settings: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update settings")
+
+@app.get("/api/user/usage")
+async def get_user_usage_info(user_id: str = Depends(require_auth)):
+    """Get user's current usage and limits"""
+    try:
+        usage = supabase_service.get_user_usage(user_id)
+        usage_check = supabase_service.check_usage_limit(user_id)
+        
+        return {
+            **usage,
+            "can_generate": usage_check["allowed"],
+            "daily_remaining": usage_check["daily_remaining"],
+            "monthly_remaining": usage_check["monthly_remaining"]
+        }
+    except Exception as e:
+        logger.error(f"Error fetching usage info: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch usage information")
+
+# ========================================
+# ORIGINAL ENDPOINTS (keeping for backwards compatibility)
+# ========================================
 
 # Optimization Endpoints (Frontend Compatible)
 @app.get("/optimization/my-channel")
@@ -947,14 +1101,14 @@ async def get_current_voice():
         raise HTTPException(status_code=500, detail=f"Failed to get current voice: {e}")
 
 @app.get("/api/status")
-async def get_status():
-    """Get current automation status from Supabase"""
+async def get_status(user_id: str = Depends(get_user_or_demo)):
+    """Get current automation status from Supabase (authenticated)"""
     try:
-        # Get status from Supabase
-        status = supabase_service.get_automation_status("demo_user")
+        # Get status from Supabase for the authenticated user
+        status = supabase_service.get_automation_status(user_id)
         return status
     except Exception as e:
-        logger.error(f"Error getting status: {e}")
+        logger.error(f"Error getting status for user {user_id}: {e}")
         # Return default status on error
         return {
             "running": False,
@@ -1078,11 +1232,26 @@ async def get_config():
     }
 
 @app.post("/api/automation/trigger")
-async def trigger_automation(request: TriggerAutomation, background_tasks: BackgroundTasks):
-    """Trigger the automation process"""
-    if automation_status["running"]:
-        raise HTTPException(status_code=400, detail="Automation already running")
+async def trigger_automation(
+    request: TriggerAutomation,
+    background_tasks: BackgroundTasks,
+    user_id: str = Depends(get_user_or_demo)
+):
+    """Trigger the automation process (authenticated)"""
+    # Check usage limits
+    usage_check = supabase_service.check_usage_limit(user_id)
+    if not usage_check["allowed"]:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily limit reached. {usage_check['daily_remaining']} videos remaining today. Upgrade plan for more."
+        )
     
+    # Get current status for this user
+    current_status = supabase_service.get_automation_status(user_id)
+    if current_status.get("running"):
+        raise HTTPException(status_code=400, detail="Automation already running for this user")
+    
+    # Initialize automation status
     automation_status["running"] = True
     automation_status["current_step"] = "Starting..."
     automation_status["progress"] = 0
@@ -1094,59 +1263,54 @@ async def trigger_automation(request: TriggerAutomation, background_tasks: Backg
         run_automation_async,
         request.config.language,
         request.config.upload_to_youtube,
-        request.user_id,
+        user_id,  # Use authenticated user_id
         request.config.custom_topic
     )
     
     return {"message": "Automation started", "status": automation_status}
 
 @app.get("/api/automation/stop")
-async def stop_automation():
-    """Stop the automation process"""
+async def stop_automation(user_id: str = Depends(get_user_or_demo)):
+    """Stop the automation process for the authenticated user"""
+    current_status = supabase_service.get_automation_status(user_id)
+    if not current_status.get("running"):
+        raise HTTPException(status_code=400, detail="No automation running for this user")
+    
     automation_status["running"] = False
     automation_status["current_step"] = "Stopped"
+    
+    # Update in Supabase
+    supabase_service.update_automation_status(user_id, automation_status)
+    
     return {"message": "Automation stopped"}
 
 @app.get("/api/videos")
-async def get_videos():
-    """Get list of generated videos"""
-    videos = []
-    output_dir = Path(config.OUTPUT_DIR)
-    
-    if output_dir.exists():
-        for video_file in output_dir.glob("*.mp4"):
-            metadata_file = video_file.with_suffix('.json')
-            if metadata_file.exists():
-                try:
-                    with open(metadata_file, 'r') as f:
-                        metadata = json.load(f)
-                    
-                    videos.append({
-                        "id": video_file.stem,
-                        "title": metadata.get("title", "Unknown"),
-                        "topic": metadata.get("topic", "Unknown"),
-                        "duration": metadata.get("duration", 0),
-                        "created_at": metadata.get("timestamp", "Unknown"),
-                        "file_path": str(video_file),
-                        "youtube_url": metadata.get("youtube_upload", {}).get("video_url"),
-                        "performance": {
-                            "images_used": metadata.get("images_used", 0),
-                            "script_length": len(metadata.get("script", "")),
-                            "scenes": len(metadata.get("scenes", []))
-                        }
-                    })
-                except Exception as e:
-                    logger.error(f"Error reading metadata for {video_file}: {e}")
-    
-    # Sort by creation date (newest first)
-    videos.sort(key=lambda x: x["created_at"], reverse=True)
-    return {"videos": videos, "total": len(videos)}
+async def get_videos(user_id: str = Depends(get_user_or_demo)):
+    """Get list of generated videos for authenticated user"""
+    try:
+        # Get video history from Supabase
+        videos = supabase_service.get_video_history(user_id, limit=50)
+        return {"videos": videos, "total": len(videos)}
+    except Exception as e:
+        logger.error(f"Error fetching videos for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch videos")
 
 @app.get("/api/videos/{video_id}")
-async def get_video_details(video_id: str):
-    """Get detailed information about a specific video"""
-    video_file = Path(config.OUTPUT_DIR) / f"{video_id}.mp4"
-    metadata_file = Path(config.OUTPUT_DIR) / f"{video_id}.json"
+async def get_video_details(video_id: str, user_id: str = Depends(get_user_or_demo)):
+    """Get detailed information about a specific video (with user verification)"""
+    try:
+        videos = supabase_service.get_video_history(user_id, limit=1000)
+        video = next((v for v in videos if v.get('id') == video_id), None)
+        
+        if not video:
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        return video
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching video details: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch video details")
     
     if not video_file.exists() or not metadata_file.exists():
         raise HTTPException(status_code=404, detail="Video not found")
@@ -1281,6 +1445,13 @@ async def run_automation_async(language: str = "english", upload_to_youtube: boo
                 if video_path:
                     automation_status["logs"].append(f"✅ Video saved: {Path(video_path).name}")
                     automation_status["video_path"] = str(video_path)
+                
+                # Increment usage counter for successful generation
+                try:
+                    supabase_service.increment_usage(user_id)
+                    logger.info(f"✅ Usage incremented for user {user_id}")
+                except Exception as e:
+                    logger.error(f"Failed to increment usage: {e}")
                 
                 # Sync final status to Supabase
                 supabase_service.update_automation_status(user_id, automation_status)
@@ -1685,8 +1856,11 @@ async def favicon():
 # ===============================================
 
 @app.post("/api/schedules")
-async def create_schedule(schedule: ScheduleCreate, user_id: str = "demo_user"):
-    """Create a new automation schedule"""
+async def create_schedule(
+    schedule: ScheduleCreate,
+    user_id: str = Depends(get_user_or_demo)
+):
+    """Create a new automation schedule for authenticated user"""
     try:
         scheduler = get_scheduler()
         new_schedule = scheduler.create_schedule(
@@ -1701,8 +1875,8 @@ async def create_schedule(schedule: ScheduleCreate, user_id: str = "demo_user"):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/schedules")
-async def get_schedules(user_id: str = "demo_user"):
-    """Get all schedules for a user"""
+async def get_schedules(user_id: str = Depends(get_user_or_demo)):
+    """Get all schedules for authenticated user"""
     try:
         scheduler = get_scheduler()
         schedules = scheduler.get_user_schedules(user_id)
@@ -1712,13 +1886,18 @@ async def get_schedules(user_id: str = "demo_user"):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/schedules/{schedule_id}")
-async def get_schedule(schedule_id: str):
-    """Get a specific schedule"""
+async def get_schedule(schedule_id: str, user_id: str = Depends(get_user_or_demo)):
+    """Get a specific schedule (with user verification)"""
     try:
         scheduler = get_scheduler()
         schedule = scheduler.get_schedule(schedule_id)
         if not schedule:
             raise HTTPException(status_code=404, detail="Schedule not found")
+        
+        # Verify schedule belongs to user
+        if schedule.get("user_id") != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
         return {"success": True, "schedule": schedule}
     except HTTPException:
         raise
@@ -1727,10 +1906,20 @@ async def get_schedule(schedule_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/schedules/{schedule_id}")
-async def update_schedule(schedule_id: str, update: ScheduleUpdate):
-    """Update an existing schedule"""
+async def update_schedule(
+    schedule_id: str,
+    update: ScheduleUpdate,
+    user_id: str = Depends(get_user_or_demo)
+):
+    """Update an existing schedule (with user verification)"""
     try:
         scheduler = get_scheduler()
+        
+        # Verify schedule belongs to user
+        existing = scheduler.get_schedule(schedule_id)
+        if not existing or existing.get("user_id") != user_id:
+            raise HTTPException(status_code=404, detail="Schedule not found")
+        
         updated_schedule = scheduler.update_schedule(
             schedule_id=schedule_id,
             schedule_time=update.schedule_time,
@@ -1739,15 +1928,23 @@ async def update_schedule(schedule_id: str, update: ScheduleUpdate):
             active=update.active
         )
         return {"success": True, "schedule": updated_schedule}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error updating schedule: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.delete("/api/schedules/{schedule_id}")
-async def delete_schedule(schedule_id: str):
-    """Delete a schedule"""
+async def delete_schedule(schedule_id: str, user_id: str = Depends(get_user_or_demo)):
+    """Delete a schedule (with user verification)"""
     try:
         scheduler = get_scheduler()
+        
+        # Verify schedule belongs to user
+        existing = scheduler.get_schedule(schedule_id)
+        if not existing or existing.get("user_id") != user_id:
+            raise HTTPException(status_code=404, detail="Schedule not found")
+        
         success = scheduler.delete_schedule(schedule_id)
         if not success:
             raise HTTPException(status_code=404, detail="Schedule not found")
