@@ -44,6 +44,25 @@ CREATE TABLE IF NOT EXISTS schedules (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Add missing columns if table already exists
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='schedules' AND column_name='is_active') THEN
+        ALTER TABLE schedules ADD COLUMN is_active BOOLEAN DEFAULT true;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='schedules' AND column_name='created_at') THEN
+        ALTER TABLE schedules ADD COLUMN created_at TIMESTAMPTZ DEFAULT now();
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='schedules' AND column_name='updated_at') THEN
+        ALTER TABLE schedules ADD COLUMN updated_at TIMESTAMPTZ DEFAULT now();
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_schedules_user_id ON schedules(user_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_active ON schedules(is_active, user_id);
 
