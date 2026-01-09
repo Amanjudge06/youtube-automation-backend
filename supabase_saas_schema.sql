@@ -47,21 +47,22 @@ CREATE TABLE IF NOT EXISTS schedules (
 -- Migrate existing schedules table if needed
 DO $$ 
 BEGIN
-    -- Check if user_id is TEXT and convert to UUID
+    -- Check if user_id is TEXT (or varchar) and convert to UUID
     IF EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_name='schedules' 
         AND column_name='user_id' 
-        AND data_type='text'
+        AND data_type IN ('text', 'character varying')
     ) THEN
         -- Drop foreign key constraint if it exists
         ALTER TABLE schedules DROP CONSTRAINT IF EXISTS schedules_user_id_fkey;
         
-        -- Convert TEXT user_id to UUID
-        -- For existing demo_user rows, we'll delete them or convert to a test UUID
-        DELETE FROM schedules WHERE user_id = 'demo_user';
+        -- Delete all rows where user_id is not a valid UUID format
+        -- We cast to text to avoid issues if column is somehow already uuid-like to the parser
+        DELETE FROM schedules 
+        WHERE user_id::text !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
         
-        -- Change column type to UUID
+        -- Change column type to UUID (now all remaining values are valid UUIDs)
         ALTER TABLE schedules ALTER COLUMN user_id TYPE UUID USING user_id::uuid;
         
         -- Add foreign key constraint
