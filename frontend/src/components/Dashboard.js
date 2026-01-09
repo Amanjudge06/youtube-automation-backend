@@ -203,39 +203,78 @@ const Dashboard = ({ status, onTriggerAutomation, onStopAutomation }) => {
 
       {/* Status Bar */}
       {status.running && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center space-x-2">
-              <Activity className="w-5 h-5 text-blue-600 animate-pulse" />
-              <span className="font-medium text-blue-900">Automation Running</span>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 md:p-6 shadow-md">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 space-y-2 md:space-y-0">
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <Activity className="w-6 h-6 text-blue-600 animate-pulse" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
+              </div>
+              <div>
+                <span className="font-semibold text-blue-900 text-lg">Automation Running</span>
+                <p className="text-xs text-blue-600 mt-0.5">Processing your video...</p>
+              </div>
             </div>
             <button
               onClick={onStopAutomation}
-              className="flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm"
+              className="flex items-center justify-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
             >
-              <Square className="w-4 h-4 mr-1" />
-              Stop
+              <Square className="w-4 h-4 mr-2" />
+              Stop Process
             </button>
           </div>
           
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-blue-700">{status.current_step}</p>
-            <div className="w-full bg-blue-200 rounded-full h-3">
+          <div className="space-y-3">
+            {/* Current Step */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-blue-800">{status.current_step || 'Processing...'}</p>
+              <span className="text-sm font-bold text-blue-900">{Math.round(status.progress || 0)}%</span>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="relative w-full bg-blue-100 rounded-full h-4 overflow-hidden shadow-inner">
               <div 
-                className="bg-blue-600 h-3 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
-                style={{ width: `${status.progress}%` }}
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-700 ease-out flex items-center justify-end"
+                style={{ width: `${Math.max(status.progress || 0, 2)}%` }}
               >
-                <span className="text-xs text-white font-medium">{status.progress}%</span>
+                <div className="absolute inset-0 bg-white opacity-20 animate-shimmer"></div>
               </div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-xs font-semibold text-blue-900 mix-blend-difference">
+                  {Math.round(status.progress || 0)}%
+                </span>
+              </div>
+            </div>
+            
+            {/* Progress Steps Indicator */}
+            <div className="grid grid-cols-6 gap-1 mt-2">
+              {['Trending', 'Research', 'Script', 'Voice', 'Images', 'Video'].map((step, idx) => {
+                const stepProgress = ((idx + 1) / 6) * 100;
+                const isComplete = (status.progress || 0) >= stepProgress;
+                const isCurrent = (status.progress || 0) >= stepProgress - 16 && (status.progress || 0) < stepProgress;
+                return (
+                  <div key={step} className="text-center">
+                    <div className={`h-1.5 rounded-full transition-all duration-500 ${
+                      isComplete ? 'bg-green-500' : isCurrent ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'
+                    }`}></div>
+                    <p className={`text-xs mt-1 transition-colors ${
+                      isComplete ? 'text-green-600 font-medium' : isCurrent ? 'text-blue-600 font-medium' : 'text-gray-400'
+                    }`}>{step}</p>
+                  </div>
+                );
+              })}
             </div>
             
             {/* Show recent logs */}
             {status.logs && status.logs.length > 0 && (
-              <div className="mt-3 bg-white rounded p-3 max-h-32 overflow-y-auto">
-                <p className="text-xs font-medium text-gray-600 mb-1">Recent Activity:</p>
-                <div className="space-y-1">
+              <div className="mt-4 bg-white rounded-lg p-3 max-h-40 overflow-y-auto shadow-sm border border-blue-100">
+                <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center">
+                  <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                  Activity Log
+                </p>
+                <div className="space-y-1.5">
                   {status.logs.slice(-5).map((log, idx) => (
-                    <p key={idx} className="text-xs text-gray-700">{log}</p>
+                    <p key={idx} className="text-xs text-gray-600 pl-4 border-l-2 border-blue-200 py-0.5">{log}</p>
                   ))}
                 </div>
               </div>

@@ -65,7 +65,7 @@ function App() {
     };
 
     fetchStatus();
-    const interval = setInterval(fetchStatus, 2000); // Poll every 2 seconds
+    const interval = setInterval(fetchStatus, 1000); // Poll every 1 second for smoother progress
     
     return () => clearInterval(interval);
   }, [session]);
