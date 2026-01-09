@@ -57,6 +57,9 @@ BEGIN
         -- Drop foreign key constraint if it exists
         ALTER TABLE schedules DROP CONSTRAINT IF EXISTS schedules_user_id_fkey;
         
+        -- Drop default constraint on user_id if it exists to allow type change
+        ALTER TABLE schedules ALTER COLUMN user_id DROP DEFAULT;
+
         -- Delete all rows where user_id is not a valid UUID format
         -- We cast to text to avoid issues if column is somehow already uuid-like to the parser
         DELETE FROM schedules 
@@ -117,6 +120,57 @@ CREATE TABLE IF NOT EXISTS automation_status (
     
     UNIQUE(user_id)
 );
+
+-- Migrate existing automation_status table if needed
+DO $$ 
+BEGIN
+    -- Check if user_id is TEXT/VARCHAR and convert to UUID
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name='automation_status' 
+        AND column_name='user_id' 
+        AND data_type IN ('text', 'character varying')
+
+        -- Drop default constraint on user_id if it exists to allow type change
+        ALTER TABLE automation_status ALTER COLUMN user_id DROP DEFAULT;
+    ) THEN
+        -- Drop foreign key constraint if it exists
+        ALTER TABLE automation_status DROP CONSTRAINT IF EXISTS automation_status_user_id_fkey;
+        
+        -- Delete all rows where user_id is not a valid UUID format
+        DELETE FROM automation_status 
+        WHERE user_id::text !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+        
+        -- Change column type to UUID
+        ALTER TABLE automation_status ALTER COLUMN user_id TYPE UUID USING user_id::uuid;
+        
+        -- Add foreign key constraint
+        ALTER TABLE automation_status ADD CONSTRAINT automation_status_user_id_fkey 
+            FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+
+    -- Add missing columns if needed
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='automation_status' AND column_name='running') THEN
+        ALTER TABLE automation_status ADD COLUMN running BOOLEAN DEFAULT false;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='automation_status' AND column_name='current_step') THEN
+        ALTER TABLE automation_status ADD COLUMN current_step TEXT DEFAULT '';
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='automation_status' AND column_name='progress') THEN
+        ALTER TABLE automation_status ADD COLUMN progress INTEGER DEFAULT 0;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name='automation_status' AND column_name='logs') THEN
+        ALTER TABLE automation_status ADD COLUMN logs JSONB DEFAULT '[]'::jsonb;
+    END IF;
+END $$;
+
 
 CREATE INDEX IF NOT EXISTS idx_automation_status_user_id ON automation_status(user_id);
 CREATE INDEX IF NOT EXISTS idx_automation_status_running ON automation_status(running, user_id);
